@@ -1,4 +1,4 @@
-// Importer version: 4.1 — crawl diagnostics
+// Importer version: 5.0 — sequential Cloudflare Browser Run /content
 const JSON_HEADERS={
   'content-type':'application/json; charset=utf-8',
   'cache-control':'no-store',
@@ -21,8 +21,8 @@ const decodeHtml=value=>String(value||'')
   .replace(/\s+/g,' ')
   .trim();
 
-function jsonResponse(data,status=200){
-  return new Response(JSON.stringify(data),{status,headers:JSON_HEADERS});
+function jsonResponse(data,status=200,extraHeaders={}){
+  return new Response(JSON.stringify(data),{status,headers:{...JSON_HEADERS,...extraHeaders}});
 }
 
 function normalizeListUrl(input){
@@ -31,35 +31,11 @@ function normalizeListUrl(input){
   if(!/(^|\.)kinopoisk\.ru$/i.test(url.hostname))throw new Error('Нужна ссылка на kinopoisk.ru.');
   const match=url.pathname.match(/^\/user\/(\d+)\/movies\/list\/type\/(\d+)/i);
   if(!match)throw new Error('Нужна публичная ссылка на список фильмов пользователя Кинопоиска.');
-  const root=`https://www.kinopoisk.ru/user/${match[1]}/movies/list/type/${match[2]}/`;
-  const base=`${root}sort/default/vector/desc/`;
-  return {userId:match[1],listType:match[2],root,base};
-}
-
-function browserCredentials(env){
-  const accountId=String(env.CLOUDFLARE_ACCOUNT_ID||'').trim();
-  const token=String(env.CLOUDFLARE_BROWSER_TOKEN||'').trim();
-  if(!accountId||!token)throw new Error('В Cloudflare не настроены Browser Run переменные.');
-  return {accountId,token};
-}
-
-async function cloudflareRequest(url,token,options={}){
-  const response=await fetch(url,{
-    ...options,
-    headers:{
-      authorization:`Bearer ${token}`,
-      ...(options.body?{'content-type':'application/json'}:{}),
-      ...(options.headers||{})
-    }
-  });
-  const raw=await response.text();
-  let data={};
-  try{data=JSON.parse(raw)}catch{}
-  if(!response.ok||data.success===false){
-    const message=data?.errors?.[0]?.message||data?.error||`Cloudflare Browser Run вернул ошибку ${response.status}.`;
-    throw new Error(message);
-  }
-  return data;
+  return {
+    userId:match[1],
+    listType:match[2],
+    base:`https://www.kinopoisk.ru/user/${match[1]}/movies/list/type/${match[2]}/sort/default/vector/desc/`
+  };
 }
 
 function parseTotal(html){
@@ -83,8 +59,8 @@ function parseItems(html){
     const kinopoiskId=match[2];
     if(seen.has(kinopoiskId))continue;
     let title=decodeHtml(match[3]);
-    if(!title||/^(трейлеры|кадры|награды|сайты)$/i.test(title))continue;
-    const context=decodeHtml(html.slice(Math.max(0,match.index-250),match.index+match[0].length+1400));
+    if(!title||/^(трейлеры|кадры|награды|сайты|афиша)$/i.test(title))continue;
+    const context=decodeHtml(html.slice(Math.max(0,match.index-120),match.index+match[0].length+1300));
     const yearMatch=context.match(/(?:^|\s|\()((?:19|20)\d{2})(?:\s*[–—-]\s*((?:19|20)\d{2}|\.\.\.))?/);
     if(!yearMatch)continue;
     const isSeries=kind==='series'||/\(сериал\)\s*$/i.test(title);
@@ -102,177 +78,86 @@ function parseItems(html){
   return items;
 }
 
-async function startCrawl(list,env){
+function browserCredentials(env){
+  const accountId=String(env.CLOUDFLARE_ACCOUNT_ID||'').trim();
+  const token=String(env.CLOUDFLARE_BROWSER_TOKEN||'').trim();
+  if(!accountId||!token)throw new Error('В Cloudflare не настроены Browser Run переменные.');
+  return {accountId,token};
+}
+
+async function fetchBrowserHtml(url,env){
   const {accountId,token}=browserCredentials(env);
-  const endpoint=`https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/browser-rendering/crawl`;
-  const data=await cloudflareRequest(endpoint,token,{
+  const endpoint=`https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/browser-rendering/content`;
+  const response=await fetch(endpoint,{
     method:'POST',
+    headers:{authorization:`Bearer ${token}`,'content-type':'application/json'},
     body:JSON.stringify({
-      url:list.base,
-      limit:5,
-      depth:3,
-      source:'links',
-      formats:['html'],
-      render:true,
-      crawlPurposes:['search'],
-      maxAge:0,
-      options:{
-        includeExternalLinks:false,
-        includeSubdomains:false,
-        includePatterns:[`${list.root}**`]
-      },
+      url,
       gotoOptions:{waitUntil:'networkidle2',timeout:45000},
       rejectResourceTypes:['image','media','font']
     })
   });
-  const jobId=typeof data.result==='string'?data.result:data?.result?.id;
-  if(!jobId)throw new Error('Cloudflare не вернул идентификатор задачи импорта.');
-  return jobId;
-}
-
-async function getCrawlPage(jobId,env,params=''){
-  const {accountId,token}=browserCredentials(env);
-  const endpoint=`https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/browser-rendering/crawl/${encodeURIComponent(jobId)}${params?`?${params}`:''}`;
-  return cloudflareRequest(endpoint,token);
-}
-
-async function getRecords(jobId,env,status){
-  const records=[];
-  let cursor='';
-  for(let page=0;page<5;page++){
-    const params=new URLSearchParams({limit:'100'});
-    if(status)params.set('status',status);
-    if(cursor)params.set('cursor',cursor);
-    const data=await getCrawlPage(jobId,env,params.toString());
-    const result=data.result||{};
-    if(Array.isArray(result.records))records.push(...result.records);
-    cursor=String(result.cursor||'');
-    if(!cursor)break;
+  const raw=await response.text();
+  if(!response.ok){
+    let message=`Browser Run вернул ошибку ${response.status}.`;
+    try{
+      const data=JSON.parse(raw);
+      message=data?.errors?.[0]?.message||data?.error||message;
+    }catch{}
+    const retryAfter=Math.max(0,Number(response.headers.get('retry-after'))||0);
+    const error=new Error(message);
+    error.status=response.status;
+    error.retryAfter=retryAfter;
+    throw error;
   }
-  return records;
-}
-
-function recordContent(record){
-  return String(record?.html||record?.markdown||record?.content||'');
-}
-
-function compactRecord(record){
-  const content=recordContent(record);
-  return {
-    url:String(record?.url||record?.metadata?.url||'').slice(0,220),
-    recordStatus:String(record?.status||''),
-    httpStatus:Number(record?.metadata?.status||0)||null,
-    title:String(record?.metadata?.title||'').slice(0,140),
-    contentLength:content.length,
-    sample:decodeHtml(content).slice(0,260)
-  };
-}
-
-function diagnosticMessage(summary){
-  const first=summary.firstRecord||{};
-  const parts=[
-    `Диагностика 4.1: всего URL ${summary.total||0}, завершено ${summary.finished||0}.`,
-    `Статусы: completed ${summary.counts.completed}, skipped ${summary.counts.skipped}, disallowed ${summary.counts.disallowed}, errored ${summary.counts.errored}.`
-  ];
-  if(first.url)parts.push(`Первая страница: HTTP ${first.httpStatus??'—'}, «${first.title||'без заголовка'}», ${first.contentLength||0} символов.`);
-  if(first.sample)parts.push(`Начало ответа: ${first.sample}`);
-  return parts.join(' ');
+  try{
+    const data=JSON.parse(raw);
+    return String(data?.result?.content||data?.result||data?.content||raw);
+  }catch{return raw;}
 }
 
 export async function onRequestPost(context){
   try{
     const body=await context.request.json().catch(()=>({}));
     const list=normalizeListUrl(body.url||'');
-    const jobId=await startCrawl(list,context.env);
-    return jsonResponse({status:'running',jobId,importerVersion:'4.1'},202);
-  }catch(error){
-    return jsonResponse({error:error.message||'Не удалось запустить диагностический импорт.'},400);
-  }
-}
-
-export async function onRequestGet(context){
-  try{
-    const requestUrl=new URL(context.request.url);
-    const jobId=String(requestUrl.searchParams.get('jobId')||'').trim();
-    if(!/^[a-z0-9-]{12,}$/i.test(jobId))throw new Error('Некорректный идентификатор задачи импорта.');
-
-    const statusData=await getCrawlPage(jobId,context.env,'limit=1');
-    const crawl=statusData.result||{};
-    const status=String(crawl.status||'running');
-
-    if(status==='running'){
-      return jsonResponse({
-        status,
-        jobId,
-        totalPages:Number(crawl.total)||null,
-        finishedPages:Number(crawl.finished)||0
-      },202);
+    const page=Math.max(1,Math.floor(Number(body.page)||1));
+    if(page>120)throw new Error('Номер страницы слишком большой.');
+    const pageUrl=page===1?list.base:`${list.base}page/${page}/`;
+    const html=await fetchBrowserHtml(pageUrl,context.env);
+    const items=parseItems(html);
+    const totalExpected=parseTotal(html);
+    const totalPages=totalExpected?Math.max(1,Math.ceil(totalExpected/25)):null;
+    if(!items.length){
+      const text=decodeHtml(html);
+      const sample=text.slice(0,260);
+      throw new Error(page===1
+        ?`Страница открылась, но фильмы не распознаны.${sample?` Начало ответа: ${sample}`:''}`
+        :`На странице ${page} фильмы не распознаны. Импорт можно продолжить повторно.`);
     }
-
-    if(status!=='completed'){
-      throw new Error(`Диагностика завершилась со статусом ${status}. Всего URL: ${Number(crawl.total)||0}, завершено: ${Number(crawl.finished)||0}.`);
-    }
-
-    const [completed,skipped,disallowed,errored]=await Promise.all([
-      getRecords(jobId,context.env,'completed'),
-      getRecords(jobId,context.env,'skipped'),
-      getRecords(jobId,context.env,'disallowed'),
-      getRecords(jobId,context.env,'errored')
-    ]);
-
-    const allItems=[];
-    const seen=new Set();
-    let totalExpected=0;
-    for(const record of completed){
-      const html=recordContent(record);
-      totalExpected=Math.max(totalExpected,parseTotal(html));
-      for(const item of parseItems(html)){
-        if(!seen.has(item.kinopoiskId)){
-          seen.add(item.kinopoiskId);
-          allItems.push(item);
-        }
-      }
-    }
-
-    if(allItems.length){
-      return jsonResponse({
-        status:'completed',
-        source:'kinopoisk-browser-run-crawl',
-        importerVersion:'4.1',
-        jobId,
-        totalExpected:totalExpected||null,
-        totalParsed:allItems.length,
-        crawledPages:completed.length,
-        blockedPages:disallowed.length+errored.length,
-        items:allItems
-      });
-    }
-
-    const firstRecord=compactRecord(completed[0]||errored[0]||disallowed[0]||skipped[0]||{});
-    const summary={
-      total:Number(crawl.total)||0,
-      finished:Number(crawl.finished)||0,
-      browserSecondsUsed:Number(crawl.browserSecondsUsed)||0,
-      counts:{
-        completed:completed.length,
-        skipped:skipped.length,
-        disallowed:disallowed.length,
-        errored:errored.length
-      },
-      firstRecord,
-      sampleUrls:[...completed,...skipped,...disallowed,...errored].slice(0,8).map(compactRecord)
-    };
-
     return jsonResponse({
-      error:diagnosticMessage(summary),
-      diagnostic:summary,
-      importerVersion:'4.1'
-    },422);
+      source:'kinopoisk-browser-run-content',
+      importerVersion:'5.0',
+      userId:list.userId,
+      listType:list.listType,
+      page,
+      pageUrl,
+      totalExpected:totalExpected||null,
+      totalPages,
+      totalParsed:items.length,
+      items
+    });
   }catch(error){
-    return jsonResponse({error:error.message||'Ошибка диагностики импорта.'},400);
+    if(error?.status===429){
+      return jsonResponse({
+        error:'Cloudflare временно ограничил частоту запросов.',
+        retryAfter:Math.max(10,error.retryAfter||10),
+        importerVersion:'5.0'
+      },429,{'retry-after':String(Math.max(10,error.retryAfter||10))});
+    }
+    return jsonResponse({error:error.message||'Ошибка импорта.',importerVersion:'5.0'},400);
   }
 }
 
 export function onRequest(){
-  return jsonResponse({error:'Метод не поддерживается.'},405);
+  return jsonResponse({error:'Метод не поддерживается.'},405,{allow:'POST'});
 }
