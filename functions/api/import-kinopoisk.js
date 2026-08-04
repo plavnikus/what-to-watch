@@ -1,4 +1,4 @@
-// Importer version: 2.1 — direct Kinopoisk HTML + Jina Reader fallback
+// Importer version: 3.0 — Cloudflare Browser Run
 const JSON_HEADERS={
   'content-type':'application/json; charset=utf-8',
   'cache-control':'no-store',
@@ -32,98 +32,82 @@ function normalizeListUrl(input){
   };
 }
 
-function parseTotal(text){
-  const clean=decodeHtml(text);
+function parseTotal(html){
+  const text=decodeHtml(html);
   const matches=[
-    clean.match(/всего фильмов\s*(\d+)/i),
-    clean.match(/(?:1|\d+)\s*[—-]\s*\d+\s+из\s+(\d+)/i),
-    clean.match(/Буду смотреть\s*\((\d+)\)/i)
+    text.match(/всего фильмов\s*(\d+)/i),
+    text.match(/(?:1|\d+)\s*[—-]\s*\d+\s+из\s+(\d+)/i),
+    text.match(/Буду смотреть\s*\((\d+)\)/i)
   ];
   for(const match of matches)if(match)return Number(match[1]);
   return 0;
 }
 
-function pushItem(items,seen,kind,id,rawTitle,context){
-  if(seen.has(id))return;
-  let title=decodeHtml(rawTitle).replace(/^\d+\s+/,'').trim();
-  if(!title||/^(трейлеры|кадры|награды|сайты)$/i.test(title))return;
-  const yearMatch=decodeHtml(context).match(/\((\d{4})(?:\s*[–—-]\s*(\d{4}|\.\.\.))?\)/);
-  if(!yearMatch)return;
-  const isSeries=kind.toLowerCase()==='series'||/\(сериал\)\s*$/i.test(title);
-  title=title.replace(/\s*\(сериал\)\s*$/i,'').trim();
-  if(!title)return;
-  seen.add(id);
-  items.push({
-    kinopoiskId:id,
-    title,
-    year:Number(yearMatch[1]),
-    yearTo:yearMatch[2]&&/^\d{4}$/.test(yearMatch[2])?Number(yearMatch[2]):null,
-    type:isSeries?'series':'film'
-  });
-}
-
-function parseHtmlItems(html){
+function parseItems(html){
   const items=[];
   const seen=new Set();
   const linkRegex=/<a\b[^>]*href=["'](?:https?:\/\/www\.kinopoisk\.ru)?\/(film|series)\/(\d+)\/?[^"']*["'][^>]*>([\s\S]*?)<\/a>/gi;
   let match;
   while((match=linkRegex.exec(html))){
-    const context=html.slice(match.index+match[0].length,match.index+match[0].length+900);
-    pushItem(items,seen,match[1],match[2],match[3],context);
+    const kind=match[1].toLowerCase();
+    const kinopoiskId=match[2];
+    if(seen.has(kinopoiskId))continue;
+    let title=decodeHtml(match[3]);
+    if(!title||/^(трейлеры|кадры|награды|сайты)$/i.test(title))continue;
+    const context=decodeHtml(html.slice(match.index+match[0].length,match.index+match[0].length+900));
+    const yearMatch=context.match(/^.{0,240}?\((\d{4})(?:\s*[–—-]\s*(\d{4}|\.\.\.))?\)/);
+    if(!yearMatch)continue;
+    const isSeries=kind==='series'||/\(сериал\)\s*$/i.test(title);
+    title=title.replace(/\s*\(сериал\)\s*$/i,'').trim();
+    if(!title)continue;
+    seen.add(kinopoiskId);
+    items.push({
+      kinopoiskId,
+      title,
+      year:Number(yearMatch[1]),
+      yearTo:yearMatch[2]&&/^\d{4}$/.test(yearMatch[2])?Number(yearMatch[2]):null,
+      type:isSeries?'series':'film'
+    });
   }
   return items;
 }
 
-function parseMarkdownItems(markdown){
-  const items=[];
-  const seen=new Set();
-  const linkRegex=/\[([^\]]+)\]\(https?:\/\/(?:www\.)?kinopoisk\.ru\/(film|series)\/(\d+)\/?[^)]*\)/gi;
-  let match;
-  while((match=linkRegex.exec(markdown))){
-    const context=markdown.slice(match.index+match[0].length,match.index+match[0].length+500);
-    pushItem(items,seen,match[2],match[3],match[1],context);
-  }
-  return items;
-}
+async function fetchBrowserHtml(url,env){
+  const accountId=String(env.CLOUDFLARE_ACCOUNT_ID||'').trim();
+  const token=String(env.CLOUDFLARE_BROWSER_TOKEN||'').trim();
+  if(!accountId||!token)throw new Error('В Cloudflare не настроены Browser Run переменные.');
 
-async function fetchDirect(url){
-  const response=await fetch(url,{
+  const endpoint=`https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/browser-rendering/content`;
+  const response=await fetch(endpoint,{
+    method:'POST',
     headers:{
-      'user-agent':'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18.0 Mobile/15E148 Safari/604.1',
-      'accept':'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-      'accept-language':'ru-RU,ru;q=0.9,en;q=0.7'
+      'authorization':`Bearer ${token}`,
+      'content-type':'application/json'
     },
-    redirect:'follow'
+    body:JSON.stringify({
+      url,
+      gotoOptions:{waitUntil:'networkidle2',timeout:45000},
+      rejectResourceTypes:['image','media','font']
+    })
   });
-  if(!response.ok)throw new Error(`Кинопоиск вернул ошибку ${response.status}.`);
-  return response.text();
-}
 
-async function fetchViaReader(url){
-  const readerUrl=`https://r.jina.ai/http://${url.replace(/^https?:\/\//,'')}`;
-  const response=await fetch(readerUrl,{
-    headers:{
-      'accept':'text/plain; charset=utf-8',
-      'x-no-cache':'true'
-    },
-    redirect:'follow'
-  });
-  if(!response.ok)throw new Error(`Резервный сервис чтения вернул ошибку ${response.status}.`);
-  return response.text();
-}
-
-async function fetchAndParse(url,preferReader=false){
-  if(!preferReader){
+  const raw=await response.text();
+  if(!response.ok){
+    let message=`Browser Run вернул ошибку ${response.status}.`;
     try{
-      const html=await fetchDirect(url);
-      const items=parseHtmlItems(html);
-      if(items.length)return {text:html,items,source:'direct'};
-    }catch(error){
-      // Переходим к резервному способу ниже.
-    }
+      const data=JSON.parse(raw);
+      message=data?.errors?.[0]?.message||data?.error||message;
+    }catch{}
+    throw new Error(message);
   }
-  const markdown=await fetchViaReader(url);
-  return {text:markdown,items:parseMarkdownItems(markdown),source:'reader'};
+
+  // В зависимости от версии API ответ может быть HTML либо JSON-обёрткой.
+  try{
+    const data=JSON.parse(raw);
+    return data?.result?.content||data?.result||data?.content||raw;
+  }catch{
+    return raw;
+  }
 }
 
 export async function onRequestPost(context){
@@ -131,21 +115,26 @@ export async function onRequestPost(context){
     const body=await context.request.json().catch(()=>({}));
     const list=normalizeListUrl(body.url||'');
 
-    const first=await fetchAndParse(list.base);
-    const total=parseTotal(first.text);
-    const totalPages=Math.max(1,Math.ceil((total||25)/25));
+    const firstHtml=await fetchBrowserHtml(list.base,context.env);
+    const total=parseTotal(firstHtml);
+    const firstItems=parseItems(firstHtml);
+    if(!firstItems.length){
+      throw new Error('Browser Run открыл страницу, но фильмы не распознаны. Возможно, Кинопоиск показал защитную страницу.');
+    }
+
+    const totalPages=Math.max(1,Math.ceil((total||firstItems.length)/25));
     if(totalPages>120)throw new Error('Список слишком большой для импорта.');
 
-    const all=[...first.items];
+    const all=[...firstItems];
     const seen=new Set(all.map(item=>item.kinopoiskId));
     const pages=Array.from({length:Math.max(0,totalPages-1)},(_,index)=>index+2);
-    const concurrency=3;
+    const concurrency=2;
 
     for(let offset=0;offset<pages.length;offset+=concurrency){
       const batch=pages.slice(offset,offset+concurrency);
       const results=await Promise.all(batch.map(async page=>{
-        const result=await fetchAndParse(`${list.base}page/${page}/`,first.source==='reader');
-        return result.items;
+        const html=await fetchBrowserHtml(`${list.base}page/${page}/`,context.env);
+        return parseItems(html);
       }));
       for(const pageItems of results){
         for(const item of pageItems){
@@ -157,11 +146,9 @@ export async function onRequestPost(context){
       }
     }
 
-    if(!all.length)throw new Error('Не удалось распознать фильмы. Кинопоиск не отдал публичный список серверу.');
-
     return new Response(JSON.stringify({
-      source:'kinopoisk-public-list',
-      parser:first.source,
+      source:'kinopoisk-browser-run',
+      importerVersion:'3.0',
       userId:list.userId,
       listType:list.listType,
       totalExpected:total||null,
@@ -174,5 +161,8 @@ export async function onRequestPost(context){
 }
 
 export function onRequest(){
-  return new Response(JSON.stringify({error:'Метод не поддерживается.'}),{status:405,headers:{...JSON_HEADERS,allow:'POST'}});
+  return new Response(JSON.stringify({error:'Метод не поддерживается.'}),{
+    status:405,
+    headers:{...JSON_HEADERS,allow:'POST'}
+  });
 }
