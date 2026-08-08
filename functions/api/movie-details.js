@@ -1,4 +1,4 @@
-// Movie details v2.0 — shared D1 catalog + PoiskKino provider adapter
+// Movie details v2.1 — shared D1 catalog + PoiskKino provider adapter
 const JSON_HEADERS = {
   'content-type': 'application/json; charset=utf-8',
   'cache-control': 'no-store',
@@ -106,6 +106,10 @@ function normalizeDatabaseMovie(row) {
   };
 }
 
+function needsProviderEnrichment(movie) {
+  return !movie || movie.source === 'library_migration';
+}
+
 async function readCachedMovies(db, ids) {
   if (!ids.length) return new Map();
   const placeholders = ids.map(() => '?').join(',');
@@ -119,7 +123,7 @@ async function readCachedMovies(db, ids) {
   return map;
 }
 
-async function fetchProviderMovie(id, token) {
+export async function fetchProviderMovie(id, token) {
   const response = await fetch(`https://api.poiskkino.dev/v1.4/movie/${encodeURIComponent(id)}`, {
     headers: {
       'X-API-KEY': token,
@@ -205,7 +209,7 @@ function createUpsertStatement(db, movie) {
   );
 }
 
-async function saveMovies(db, movies) {
+export async function saveMovies(db, movies) {
   if (!movies.length) return { attempted: 0, successful: 0, results: [] };
   const statements = movies.map(movie => createUpsertStatement(db, movie));
   const results = await db.batch(statements);
@@ -253,19 +257,20 @@ export async function onRequestPost(context) {
     }
 
     const cachedMap = await readCachedMovies(db, ids);
-    const missingIds = ids.filter(id => !cachedMap.has(id));
+    const enrichmentIds = ids.filter(id => needsProviderEnrichment(cachedMap.get(id)));
+    const staleCount = enrichmentIds.filter(id => cachedMap.has(id)).length;
     const fetchedMovies = [];
     const errors = [];
 
-    if (missingIds.length) {
+    if (enrichmentIds.length) {
       if (!token) {
-        errors.push(...missingIds.map(kinopoiskId => ({
+        errors.push(...enrichmentIds.map(kinopoiskId => ({
           kinopoiskId,
           error: 'В Cloudflare не найден секрет POISKKINO_API_TOKEN.'
         })));
       } else {
-        for (let offset = 0; offset < missingIds.length; offset += PROVIDER_CONCURRENCY) {
-          const batch = missingIds.slice(offset, offset + PROVIDER_CONCURRENCY);
+        for (let offset = 0; offset < enrichmentIds.length; offset += PROVIDER_CONCURRENCY) {
+          const batch = enrichmentIds.slice(offset, offset + PROVIDER_CONCURRENCY);
           const results = await Promise.allSettled(
             batch.map(id => fetchProviderMovie(id, token))
           );
@@ -291,7 +296,8 @@ export async function onRequestPost(context) {
       itemMap.set(movie.kinopoiskId, movie);
     }
 
-    // Сохраняем исходный порядок ID, чтобы frontend обновлял именно запрошенные позиции.
+    // Даже при ошибке внешнего API возвращаем имеющуюся минимальную запись,
+    // чтобы карточка фильма оставалась доступной пользователю.
     const items = ids.map(id => itemMap.get(id)).filter(Boolean);
 
     return jsonResponse({
@@ -301,8 +307,9 @@ export async function onRequestPost(context) {
       items,
       errors,
       cache: {
-        hits: cachedMap.size,
-        misses: missingIds.length,
+        hits: ids.length - enrichmentIds.length,
+        stale: staleCount,
+        misses: enrichmentIds.length - staleCount,
         saved: writeResult?.successful || 0
       }
     });
