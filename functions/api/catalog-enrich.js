@@ -49,6 +49,7 @@ export async function onRequestPost(context) {
     const db = context.env.MOVIES_DB;
     const providerToken = String(context.env.POISKKINO_API_TOKEN || '').trim();
     const expectedKey = String(context.env.CATALOG_ENRICH_KEY || '').trim();
+    const providedKey = readAdminKey(context.request);
 
     if (!db) {
       return jsonResponse({ error: 'В Cloudflare не найдено подключение MOVIES_DB.' }, 503);
@@ -59,8 +60,14 @@ export async function onRequestPost(context) {
     if (!expectedKey) {
       return jsonResponse({ error: 'В Cloudflare не настроен секрет CATALOG_ENRICH_KEY.' }, 503);
     }
-    if (readAdminKey(context.request) !== expectedKey) {
-      return jsonResponse({ error: 'Недостаточно прав.' }, 401);
+    if (providedKey !== expectedKey) {
+      return jsonResponse({
+        error: 'Недостаточно прав.',
+        authDebug: {
+          keyReceived: Boolean(providedKey),
+          sameLength: Boolean(providedKey) && providedKey.length === expectedKey.length
+        }
+      }, 401);
     }
 
     const body = await context.request.json().catch(() => ({}));
