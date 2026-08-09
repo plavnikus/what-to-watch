@@ -21,6 +21,14 @@ function readAdminKey(request) {
   return String(request.headers.get('x-catalog-enrich-key') || '').trim();
 }
 
+function resolveLimit(request, body) {
+  const urlLimit = new URL(request.url).searchParams.get('limit');
+  const rawLimit = urlLimit ?? body?.limit;
+  const parsed = Number(rawLimit);
+  if (!Number.isFinite(parsed)) return 1;
+  return Math.max(1, Math.min(MAX_BATCH_SIZE, Math.floor(parsed)));
+}
+
 async function countPending(db) {
   const row = await db.prepare(`
     SELECT COUNT(*) AS count
@@ -61,21 +69,11 @@ export async function onRequestPost(context) {
       return jsonResponse({ error: 'В Cloudflare не настроен секрет CATALOG_ENRICH_KEY.' }, 503);
     }
     if (providedKey !== expectedKey) {
-      return jsonResponse({
-        error: 'Недостаточно прав.',
-        authDebug: {
-          keyReceived: Boolean(providedKey),
-          receivedLength: providedKey.length,
-          expectedLength: expectedKey.length,
-          sameLength: Boolean(providedKey) && providedKey.length === expectedKey.length,
-          pagesBranch: context.env.CF_PAGES_BRANCH || null
-        }
-      }, 401);
+      return jsonResponse({ error: 'Недостаточно прав.' }, 401);
     }
 
     const body = await context.request.json().catch(() => ({}));
-    const requestedLimit = Math.floor(Number(body.limit) || MAX_BATCH_SIZE);
-    const limit = Math.max(1, Math.min(MAX_BATCH_SIZE, requestedLimit));
+    const limit = resolveLimit(context.request, body);
 
     const pendingBefore = await countPending(db);
     if (!pendingBefore) {
