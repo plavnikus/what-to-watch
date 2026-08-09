@@ -65,7 +65,10 @@ export async function onRequestPost(context) {
         error: 'Недостаточно прав.',
         authDebug: {
           keyReceived: Boolean(providedKey),
-          sameLength: Boolean(providedKey) && providedKey.length === expectedKey.length
+          receivedLength: providedKey.length,
+          expectedLength: expectedKey.length,
+          sameLength: Boolean(providedKey) && providedKey.length === expectedKey.length,
+          pagesBranch: context.env.CF_PAGES_BRANCH || null
         }
       }, 401);
     }
