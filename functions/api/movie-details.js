@@ -1,4 +1,4 @@
-// Movie details v2.1 — shared D1 catalog + PoiskKino provider adapter
+// Movie details v2.2 — shared D1 catalog + PoiskKino provider adapter
 const JSON_HEADERS = {
   'content-type': 'application/json; charset=utf-8',
   'cache-control': 'no-store',
@@ -107,7 +107,7 @@ function normalizeDatabaseMovie(row) {
 }
 
 function needsProviderEnrichment(movie) {
-  return !movie || movie.source === 'library_migration';
+  return !movie || ['library_migration', 'library_migration_failed'].includes(movie.source);
 }
 
 async function readCachedMovies(db, ids) {
