@@ -26,6 +26,8 @@ h1{font-size:24px;margin:0 0 8px}p{margin:0;color:#6f7787;line-height:1.45}.erro
   const title=document.getElementById('title');
   const message=document.getElementById('message');
   const spinner=document.getElementById('spinner');
+  const TELEGRAM_USER_KEY='movieAppTelegramUserIdV1';
+  const LEGACY_CLAIM_KEY='movieAppLegacyClaimDoneV1';
   try{
     tg?.ready();
     tg?.expand();
@@ -42,22 +44,26 @@ h1{font-size:24px;margin:0 0 8px}p{margin:0;color:#6f7787;line-height:1.45}.erro
     if(!response.ok||!data.ok)throw new Error(data.error||'Не удалось подтвердить Telegram.');
 
     const currentUserId=String(data.userId||'');
-    const previousUserId=localStorage.getItem('movieAppTelegramUserIdV1');
-    if(previousUserId&&previousUserId!==currentUserId){
+    const previousUserId=localStorage.getItem(TELEGRAM_USER_KEY);
+    if(previousUserId!==currentUserId){
       localStorage.removeItem('movieAppImportedMoviesV1');
       localStorage.removeItem('movieAppStatesV1');
       localStorage.removeItem('movieAppPendingLibrarySyncV1');
+      localStorage.removeItem('movieAppServerLibraryMigratedV1');
     }
-    localStorage.setItem('movieAppTelegramUserIdV1',currentUserId);
+    localStorage.setItem(TELEGRAM_USER_KEY,currentUserId);
 
-    message.textContent='Проверяем вашу сохранённую кинотеку…';
-    const claimResponse=await fetch('/api/legacy-library-claim',{
-      method:'POST',
-      cache:'no-store',
-      credentials:'same-origin'
-    });
-    const claim=await claimResponse.json().catch(()=>({}));
-    if(!claimResponse.ok||!claim.ok)throw new Error(claim.error||'Не удалось привязать сохранённую кинотеку.');
+    if(localStorage.getItem(LEGACY_CLAIM_KEY)!==currentUserId){
+      message.textContent='Проверяем вашу сохранённую кинотеку…';
+      const claimResponse=await fetch('/api/legacy-library-claim',{
+        method:'POST',
+        cache:'no-store',
+        credentials:'same-origin'
+      });
+      const claim=await claimResponse.json().catch(()=>({}));
+      if(!claimResponse.ok||!claim.ok)throw new Error(claim.error||'Не удалось проверить сохранённую кинотеку.');
+      localStorage.setItem(LEGACY_CLAIM_KEY,currentUserId);
+    }
 
     localStorage.setItem('movieAppServerLibraryMigratedV1','1');
     location.replace('/');
