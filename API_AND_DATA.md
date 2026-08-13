@@ -98,19 +98,13 @@ CREATE TABLE IF NOT EXISTS movies (
 
 ## 5. users
 
-В текущем MVP существует временный пользователь:
+Таблица `users` уже поддерживает Telegram identity через `telegram_user_id`, а также имя, username и avatar URL.
+
+До завершения подключения Telegram к `/api/user-library` текущий интерфейс продолжает работать через временного пользователя:
 
 `local_test_user`
 
-Он используется только до подключения Telegram-авторизации.
-
-Целевая модель пользователя должна поддерживать:
-
-- внутренний `id`;
-- Telegram identity;
-- имя / username;
-- тему;
-- даты создания и обновления.
+Telegram-пользователь получает отдельный внутренний `id`, а `telegram_user_id` используется как уникальная внешняя identity. Это позволяет не привязывать `user_movies` напрямую к формату Telegram ID.
 
 ## 6. user_movies
 
@@ -252,7 +246,7 @@ GET /api/catalog-search?preset=starter
 
 ### /api/user-library
 
-Работает с личной кинотекой `local_test_user`.
+Пока работает с личной кинотекой `local_test_user`. Следующий шаг Telegram-этапа — заменить временный resolver на серверно подтверждённую Telegram identity, не меняя контракт `user_movies`.
 
 Поддерживает:
 
@@ -264,6 +258,37 @@ GET /api/catalog-search?preset=starter
 - bulk migration библиотеки.
 
 При bulk migration неизвестный фильм может получить минимальную запись в `movies` с `source='library_migration'` без обязательного вызова внешнего API.
+
+### POST /api/telegram-auth
+
+Первый серверный слой Telegram Mini App identity.
+
+Запрос должен передавать сырую строку `Telegram.WebApp.initData` в заголовке:
+
+```text
+x-telegram-init-data: <raw initData>
+```
+
+Сервер:
+
+1. получает `initData`;
+2. строит Telegram data-check-string;
+3. проверяет HMAC-SHA-256 подпись с использованием `TELEGRAM_BOT_TOKEN`;
+4. проверяет `auth_date`, чтобы не принимать устаревшую сессию;
+5. извлекает пользователя только после успешной проверки;
+6. ищет `users.telegram_user_id`;
+7. обновляет профиль существующего пользователя либо создаёт нового;
+8. возвращает внутренний `userId` и подтверждённые публичные данные пользователя.
+
+`initDataUnsafe` не используется как источник авторизации.
+
+По умолчанию допустимый возраст `initData` — 24 часа. Его можно изменить через `TELEGRAM_AUTH_MAX_AGE_SECONDS`.
+
+Для работы требуется server-side Secret:
+
+- `TELEGRAM_BOT_TOKEN`.
+
+`GET /api/telegram-auth` не поддерживается.
 
 ### POST /api/catalog-enrich
 
@@ -307,7 +332,8 @@ Queue-safe успешный сценарий проверен на Preview: `req
 Используемые server-side secrets:
 
 - `POISKKINO_API_TOKEN`;
-- `CATALOG_ENRICH_KEY`.
+- `CATALOG_ENRICH_KEY`;
+- `TELEGRAM_BOT_TOKEN` — после подключения Telegram Mini App.
 
 ### GitHub Actions: ежедневное обогащение
 
@@ -368,7 +394,7 @@ Frontend не должен содержать его секреты и не до
 1. по требованию при открытии карточки через `/api/movie-details`;
 2. пакетно через защищённый `/api/catalog-enrich`, включая ежедневный GitHub Actions scheduled-run.
 
-После завершения фоновой очереди перед Telegram-этапом необходимо провести финальный аудит: остаток `library_migration`, количество `library_migration_failed`, полнота ключевых полей каталога и сохранность всех 1098 связей `user_movies`.
+После завершения фоновой очереди проводится финальный аудит: остаток `library_migration`, количество `library_migration_failed`, полнота ключевых полей каталога и сохранность всех 1098 связей `user_movies`. Этот аудит не блокирует Telegram-разработку.
 
 ## 14. Фильтры
 
@@ -403,23 +429,26 @@ Frontend не должен содержать его секреты и не до
 - API-ключи только на сервере.
 - Секреты через environment variables / secrets.
 - `CLOUDFLARE_ACCOUNT_ID` может храниться как обычная переменная; токены и служебные ключи — как Secret.
-- `CLOUDFLARE_BROWSER_TOKEN`, `POISKKINO_API_TOKEN` и `CATALOG_ENRICH_KEY` должны храниться как Secret.
+- `CLOUDFLARE_BROWSER_TOKEN`, `POISKKINO_API_TOKEN`, `CATALOG_ENRICH_KEY` и `TELEGRAM_BOT_TOKEN` должны храниться как Secret.
 - Frontend не считается доверенной средой.
+- Telegram `initDataUnsafe` нельзя использовать как доказательство identity.
+- Telegram `initData` проверяется сервером до использования Telegram user ID.
 - Все пользовательские изменения должны проверяться на сервере.
-- После Telegram-интеграции `initData` проверяется сервером.
 - Пользователь имеет доступ только к собственным `user_movies`.
 - Внешним поставщикам каталога не передаются личные пользовательские данные.
 
-## 16. Telegram — следующий этап
+## 16. Telegram — текущий этап
 
-Для Mini App требуется:
+Порядок:
 
-1. Telegram Bot / Mini App оболочка;
-2. получение `initData`;
-3. серверная проверка подписи;
-4. создание/поиск пользователя в `users`;
+1. серверная проверка `initData` — реализована как foundation;
+2. создание/обновление пользователя в `users` — реализовано в `/api/telegram-auth`;
+3. подключение Telegram Web App SDK во frontend;
+4. передача `initData` в пользовательские API-запросы;
 5. замена временного `resolveUserId() => local_test_user` на проверенную identity;
-6. использование того же `user_movies` без переписывания основной модели.
+6. использование того же `user_movies` без переписывания основной модели;
+7. настройка BotFather / Main Mini App;
+8. проверка нескольких независимых пользователей.
 
 ## 17. Не входит в текущий MVP
 
