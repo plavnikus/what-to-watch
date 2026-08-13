@@ -45,8 +45,14 @@ export async function onRequestPost(context) {
   if (!configuredOwner) {
     return json({ error: 'Владелец старой кинотеки ещё не задан на сервере.' }, 503);
   }
+
   if (session.userId !== configuredOwner) {
-    return json({ error: 'Эта старая кинотека принадлежит другому пользователю.' }, 403);
+    return json({
+      ok: true,
+      eligible: false,
+      userId: session.userId,
+      copied: 0
+    });
   }
 
   try {
@@ -63,6 +69,7 @@ export async function onRequestPost(context) {
     if (!sourceCount) {
       return json({
         ok: true,
+        eligible: true,
         userId: session.userId,
         copied: 0,
         sourceCount: 0,
@@ -94,6 +101,7 @@ export async function onRequestPost(context) {
 
     return json({
       ok: true,
+      eligible: true,
       userId: session.userId,
       copied: Math.max(0, targetAfter - targetBefore),
       sourceCount,
