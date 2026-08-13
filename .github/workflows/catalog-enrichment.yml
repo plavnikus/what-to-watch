@@ -90,7 +90,13 @@ jobs:
 
             if [ "$http_status" != "200" ]; then
               echo "Catalog enrichment endpoint returned HTTP ${http_status}."
-              echo "$body" | jq -c '{error: .error // "unknown error"}' || true
+              if echo "$body" | jq -e . >/dev/null 2>&1; then
+                echo "$body" | jq -c '{error: (.error // .message // "unknown error")}'
+              else
+                echo "Endpoint returned a non-JSON response (first 2000 chars):"
+                printf '%s\n' "$body" | head -c 2000
+                echo
+              fi
               exit 1
             fi
 
