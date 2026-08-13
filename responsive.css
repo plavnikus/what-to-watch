@@ -2,57 +2,57 @@
 html,body{width:100%;max-width:100%;overflow-x:hidden}
 .app{width:100%}
 
-.topbar>div,
-.quick-choice>div:first-child,
-.movie-card>div,
-.catalog-card>div,
-.catalog-head>div,
-.detail-title-row h2,
-.filter-row>span:first-child,
-.filter-row .value,
-.result-head>div{min-width:0}
+.app .topbar>div,
+.app .quick-choice>div:first-child,
+.app .movie-card>div,
+.app .catalog-card>div,
+.app .catalog-head>div,
+.app .detail-title-row h2,
+.app .filter-row>span:first-child,
+.app .filter-row .value,
+.app .result-head>div{min-width:0}
 
-.quick-choice .muted,
-.movie-card h3,
-.catalog-card h3,
-.catalog-note,
-.detail-title-row h2,
-.filter-row>span,
-.result-head{overflow-wrap:anywhere}
+.app .quick-choice .muted,
+.app .movie-card h3,
+.app .catalog-card h3,
+.app .catalog-note,
+.app .detail-title-row h2,
+.app .filter-row>span,
+.app .result-head{overflow-wrap:anywhere}
 
-main{padding-bottom:calc(92px + env(safe-area-inset-bottom))}
-.nav{padding-bottom:env(safe-area-inset-bottom)}
-.nav button{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.toast{bottom:calc(84px + env(safe-area-inset-bottom))}
+.app main{padding-bottom:calc(92px + env(safe-area-inset-bottom))}
+.app .nav{padding-bottom:env(safe-area-inset-bottom)}
+.app .nav button{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.app .toast{bottom:calc(84px + env(safe-area-inset-bottom))}
 
-.home-status-card{min-width:0;overflow:hidden}
-.home-status-card strong,.home-status-card .muted{min-width:0}
-.library-head,.catalog-head,.result-head{min-width:0}
+.app .home-status-card{min-width:0;overflow:hidden}
+.app .home-status-card strong,.app .home-status-card .muted{min-width:0}
+.app .library-head,.app .catalog-head,.app .result-head{min-width:0}
 
 @media (min-width:391px) and (max-width:430px){
-  .home-status-card{padding:11px}
-  .home-status-card strong{font-size:23px}
-  .home-status-card .muted{font-size:11px}
+  .app .home-status-card{padding:11px}
+  .app .home-status-card strong{font-size:23px}
+  .app .home-status-card .muted{font-size:11px}
 }
 
 @media (max-width:390px){
-  .home-status-card{grid-template-columns:28px auto minmax(0,1fr);column-gap:12px}
-  .home-status-card strong{margin:0;font-size:clamp(22px,7vw,25px);white-space:nowrap}
-  .home-status-card .muted{overflow-wrap:anywhere}
+  .app .home-status-card{grid-template-columns:28px max-content minmax(0,1fr);column-gap:12px}
+  .app .home-status-card strong{margin:0;font-size:clamp(22px,7vw,25px);white-space:nowrap}
+  .app .home-status-card .muted{overflow-wrap:anywhere}
 }
 
 @media (max-width:350px){
-  main{padding-left:12px;padding-right:12px}
-  .hero{padding:16px}
-  h1{font-size:clamp(24px,8vw,28px)}
-  h2{font-size:22px}
-  .actions,.searchbar{grid-template-columns:1fr}
-  .movie-card,.catalog-card{grid-template-columns:72px minmax(0,1fr);gap:10px;padding-right:42px}
-  .movie-card .poster,.catalog-card .poster{width:72px}
-  .nav button{font-size:11px;padding-left:1px;padding-right:1px}
-  .type-options,.year-presets,.year-range,.sheet-actions{grid-template-columns:1fr}
-  .filter-row{gap:8px;padding-left:12px;padding-right:12px}
-  .filter-row .value{font-size:13px}
-  .sheet{padding-left:12px;padding-right:12px}
-  .library-head{flex-wrap:wrap}
+  .app main{padding-left:12px;padding-right:12px}
+  .app .hero{padding:16px}
+  .app h1{font-size:clamp(24px,8vw,28px)}
+  .app h2{font-size:22px}
+  .app .actions,.app .searchbar{grid-template-columns:1fr}
+  .app .movie-card,.app .catalog-card{grid-template-columns:72px minmax(0,1fr);gap:10px;padding-right:42px}
+  .app .movie-card .poster,.app .catalog-card .poster{width:72px}
+  .app .nav button{font-size:11px;padding-left:1px;padding-right:1px}
+  .app .type-options,.app .year-presets,.app .year-range,.app .sheet-actions{grid-template-columns:1fr}
+  .app .filter-row{gap:8px;padding-left:12px;padding-right:12px}
+  .app .filter-row .value{font-size:13px}
+  .app .sheet{padding-left:12px;padding-right:12px}
+  .app .library-head{flex-wrap:wrap}
 }
