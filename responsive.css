@@ -1,0 +1,58 @@
+/* Responsive hardening: compact phones, Telegram safe areas, long content */
+html,body{width:100%;max-width:100%;overflow-x:hidden}
+.app{width:100%}
+
+.app .topbar>div,
+.app .quick-choice>div:first-child,
+.app .movie-card>div,
+.app .catalog-card>div,
+.app .catalog-head>div,
+.app .detail-title-row h2,
+.app .filter-row>span:first-child,
+.app .filter-row .value,
+.app .result-head>div{min-width:0}
+
+.app .quick-choice .muted,
+.app .movie-card h3,
+.app .catalog-card h3,
+.app .catalog-note,
+.app .detail-title-row h2,
+.app .filter-row>span,
+.app .result-head{overflow-wrap:anywhere}
+
+.app main{padding-bottom:calc(92px + env(safe-area-inset-bottom))}
+.app .nav{padding-bottom:env(safe-area-inset-bottom)}
+.app .nav button{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.app .toast{bottom:calc(84px + env(safe-area-inset-bottom))}
+
+.app .home-status-card{min-width:0;overflow:hidden}
+.app .home-status-card strong,.app .home-status-card .muted{min-width:0}
+.app .library-head,.app .catalog-head,.app .result-head{min-width:0}
+
+@media (min-width:391px) and (max-width:430px){
+  .app .home-status-card{padding:11px}
+  .app .home-status-card strong{font-size:23px}
+  .app .home-status-card .muted{font-size:11px}
+}
+
+@media (max-width:390px){
+  .app .home-status-card{grid-template-columns:28px max-content minmax(0,1fr);column-gap:12px}
+  .app .home-status-card strong{margin:0;font-size:clamp(22px,7vw,25px);white-space:nowrap}
+  .app .home-status-card .muted{overflow-wrap:anywhere}
+}
+
+@media (max-width:350px){
+  .app main{padding-left:12px;padding-right:12px}
+  .app .hero{padding:16px}
+  .app h1{font-size:clamp(24px,8vw,28px)}
+  .app h2{font-size:22px}
+  .app .actions,.app .searchbar{grid-template-columns:1fr}
+  .app .movie-card,.app .catalog-card{grid-template-columns:72px minmax(0,1fr);gap:10px;padding-right:42px}
+  .app .movie-card .poster,.app .catalog-card .poster{width:72px}
+  .app .nav button{font-size:11px;padding-left:1px;padding-right:1px}
+  .app .type-options,.app .year-presets,.app .year-range,.app .sheet-actions{grid-template-columns:1fr}
+  .app .filter-row{gap:8px;padding-left:12px;padding-right:12px}
+  .app .filter-row .value{font-size:13px}
+  .app .sheet{padding-left:12px;padding-right:12px}
+  .app .library-head{flex-wrap:wrap}
+}
