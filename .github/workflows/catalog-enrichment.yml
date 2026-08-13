@@ -1,6 +1,9 @@
 name: Daily catalog enrichment
 
 on:
+  push:
+    branches:
+      - agent/responsive-hardening
   schedule:
     - cron: '30 3 * * *'
   workflow_dispatch:
@@ -25,7 +28,7 @@ on:
           - '6'
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: daily-catalog-enrichment
@@ -35,7 +38,104 @@ env:
   CATALOG_ENRICH_BASE_URL: https://what-to-watch-awy.pages.dev/api/catalog-enrich
 
 jobs:
+  responsive_patch:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Patch index.html through GitHub API
+        shell: bash
+        run: |
+          set -euo pipefail
+          api="https://api.github.com/repos/${GITHUB_REPOSITORY}/contents/index.html?ref=agent%2Fresponsive-hardening"
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "$api" > /tmp/index.json
+
+          python3 <<'PY'
+          import base64, json
+          from pathlib import Path
+
+          data=json.loads(Path('/tmp/index.json').read_text())
+          text=base64.b64decode(data['content']).decode('utf-8')
+          marker='\n</style>\n</head>'
+          token='/* Responsive hardening: compact phones, Telegram safe areas, long content */'
+          if token in text:
+              Path('/tmp/noop').write_text('1')
+              raise SystemExit(0)
+          if marker not in text:
+              raise SystemExit('style closing marker not found')
+
+          css='''
+
+/* Responsive hardening: compact phones, Telegram safe areas, long content */
+html,body{width:100%;max-width:100%;overflow-x:hidden}
+.app{width:100%}
+.topbar>div,.quick-choice>div:first-child,.movie-card>div,.catalog-card>div,.catalog-head>div,.detail-title-row h2,.filter-row>span:first-child,.filter-row .value{min-width:0}
+.quick-choice .muted,.movie-card h3,.catalog-card h3,.detail-title-row h2,.filter-row>span{overflow-wrap:anywhere}
+main{padding-bottom:calc(92px + env(safe-area-inset-bottom))}
+.nav{padding-bottom:env(safe-area-inset-bottom)}
+.nav button{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.home-status-card{min-width:0;overflow:hidden}
+.home-status-card strong,.home-status-card .muted{min-width:0}
+
+@media(min-width:391px) and (max-width:430px){
+  .home-status-card{padding:11px}
+  .home-status-card strong{font-size:23px}
+  .home-status-card .muted{font-size:11px}
+}
+
+@media(max-width:390px){
+  .home-status-card{grid-template-columns:28px max-content minmax(0,1fr);column-gap:12px}
+  .home-status-card strong{margin:0;font-size:clamp(22px,7vw,25px);white-space:nowrap}
+  .home-status-card .muted{overflow-wrap:anywhere}
+}
+
+@media(max-width:350px){
+  main{padding-left:12px;padding-right:12px}
+  .hero{padding:16px}
+  h1{font-size:clamp(24px,8vw,28px)}
+  h2{font-size:22px}
+  .actions,.searchbar{grid-template-columns:1fr}
+  .movie-card,.catalog-card{grid-template-columns:72px minmax(0,1fr);gap:10px;padding-right:42px}
+  .movie-card .poster,.catalog-card .poster{width:72px}
+  .nav button{font-size:11px;padding-left:1px;padding-right:1px}
+  .type-options,.year-presets,.year-range,.sheet-actions{grid-template-columns:1fr}
+  .filter-row{gap:8px;padding-left:12px;padding-right:12px}
+  .filter-row .value{font-size:13px}
+  .sheet{padding-left:12px;padding-right:12px}
+}
+'''
+          updated=text.replace(marker,css+marker,1)
+          payload={
+            'message':'fix: harden responsive layout across compact devices',
+            'content':base64.b64encode(updated.encode()).decode(),
+            'sha':data['sha'],
+            'branch':'agent/responsive-hardening'
+          }
+          Path('/tmp/payload.json').write_text(json.dumps(payload))
+          PY
+
+          if [ -f /tmp/noop ]; then
+            echo "Responsive CSS already present"
+            exit 0
+          fi
+
+          curl --fail --silent --show-error \
+            -X PUT \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            -H "Content-Type: application/json" \
+            --data-binary @/tmp/payload.json \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/contents/index.html" > /tmp/result.json
+          python3 -c "import json; d=json.load(open('/tmp/result.json')); print('Updated:', d['commit']['sha'])"
+
   enrich:
+    if: github.event_name != 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
