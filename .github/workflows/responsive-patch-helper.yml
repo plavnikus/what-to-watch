@@ -1,0 +1,111 @@
+name: Responsive patch helper
+
+on:
+  push:
+    branches:
+      - agent/responsive-hardening
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/responsive-hardening
+
+      - name: Apply responsive hardening
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('index.html')
+          text = path.read_text(encoding='utf-8')
+          marker = '\n</style>\n</head>'
+          if marker not in text:
+              raise SystemExit('style closing marker not found')
+
+          css = r'''
+
+/* Responsive hardening: compact phones, Telegram safe areas, long content */
+html,body{width:100%;max-width:100%;overflow-x:hidden}
+.app{width:100%}
+.topbar>div,.quick-choice>div:first-child,.movie-card>div,.catalog-card>div,.catalog-head>div,.detail-title-row h2,.filter-row>span:first-child,.filter-row .value{min-width:0}
+.quick-choice .muted,.movie-card h3,.catalog-card h3,.detail-title-row h2,.filter-row>span{overflow-wrap:anywhere}
+main{padding-bottom:calc(92px + env(safe-area-inset-bottom))}
+.nav{padding-bottom:env(safe-area-inset-bottom)}
+.nav button{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.home-status-card{min-width:0;overflow:hidden}
+.home-status-card strong,.home-status-card .muted{min-width:0}
+
+@media(min-width:391px) and (max-width:430px){
+  .home-status-card{padding:11px}
+  .home-status-card strong{font-size:23px}
+  .home-status-card .muted{font-size:11px}
+}
+
+@media(max-width:390px){
+  .home-status-card{
+    grid-template-columns:28px max-content minmax(0,1fr);
+    column-gap:12px;
+  }
+  .home-status-card strong{
+    margin:0;
+    font-size:clamp(22px,7vw,25px);
+    white-space:nowrap;
+  }
+  .home-status-card .muted{overflow-wrap:anywhere}
+}
+
+@media(max-width:350px){
+  main{padding-left:12px;padding-right:12px}
+  .hero{padding:16px}
+  h1{font-size:clamp(24px,8vw,28px)}
+  h2{font-size:22px}
+  .actions,.searchbar{grid-template-columns:1fr}
+  .movie-card,.catalog-card{
+    grid-template-columns:72px minmax(0,1fr);
+    gap:10px;
+    padding-right:42px;
+  }
+  .movie-card .poster,.catalog-card .poster{width:72px}
+  .nav button{font-size:11px;padding-left:1px;padding-right:1px}
+  .type-options,.year-presets,.year-range,.sheet-actions{grid-template-columns:1fr}
+  .filter-row{gap:8px;padding-left:12px;padding-right:12px}
+  .filter-row .value{font-size:13px}
+  .sheet{padding-left:12px;padding-right:12px}
+}
+'''
+
+          if '/* Responsive hardening: compact phones, Telegram safe areas, long content */' in text:
+              raise SystemExit('responsive hardening already applied')
+
+          text = text.replace(marker, css + marker, 1)
+          path.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Sanity check markup
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          text = Path('index.html').read_text(encoding='utf-8')
+          required = [
+              'id="home"', 'id="library"', 'id="catalog"', 'id="detail"',
+              'home-status-grid', 'Responsive hardening', '</script>', '</html>'
+          ]
+          missing = [item for item in required if item not in text]
+          if missing:
+              raise SystemExit('Missing expected markers: ' + ', '.join(missing))
+          print('Responsive patch sanity check passed')
+          PY
+
+      - name: Commit responsive patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git commit -m "fix: harden responsive layout across compact devices"
+          git push origin HEAD:agent/responsive-hardening
