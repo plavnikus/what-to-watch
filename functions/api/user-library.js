@@ -1,16 +1,21 @@
+import { verifyTelegramSession } from '../lib/telegram-session.js';
+
 const JSON_HEADERS = {
   'content-type': 'application/json; charset=utf-8',
   'cache-control': 'no-store',
   'x-content-type-options': 'nosniff'
 };
 
-const TEST_USER_ID = 'local_test_user';
 const ALLOWED_STATUSES = new Set(['none', 'watchlist', 'watched', 'rewatch']);
 
 const json = (body, status = 200) => new Response(JSON.stringify(body), {
   status,
   headers: JSON_HEADERS
 });
+
+const unauthorized = () => json({
+  error: 'Нужен вход через Telegram. Откройте приложение из бота.'
+}, 401);
 
 const asInt = value => {
   const number = Number(value);
@@ -81,6 +86,11 @@ const normalizeLibraryRow = row => {
 
 const getDb = context => context.env.MOVIES_DB;
 
+const resolveUserId = async context => {
+  const session = await verifyTelegramSession(context.request, context.env.TELEGRAM_BOT_TOKEN);
+  return session.ok ? session.userId : null;
+};
+
 const normalizeMovieSeed = item => {
   const movie = item && typeof item.movie === 'object' ? item.movie : {};
   const title = String(movie.title || item.title || 'Без названия').trim() || 'Без названия';
@@ -123,6 +133,18 @@ const buildMovieInsert = (db, kinopoiskId, seed) => db.prepare(`
   seed.imdbId || null, seed.kpUrl || null, seed.trailerUrl || null
 );
 
+const validateKinopoiskId = value => {
+  const id = asInt(value);
+  return id && id > 0 ? id : null;
+};
+
+const validateRating = value => {
+  if (value === null || value === '' || typeof value === 'undefined') return { ok: true, value: null };
+  const rating = asInt(value);
+  if (rating == null || rating < 1 || rating > 10) return { ok: false, value: null };
+  return { ok: true, value: rating };
+};
+
 const buildUserMovieUpsert = (db, userId, item) => {
   const now = new Date().toISOString();
   const status = ALLOWED_STATUSES.has(String(item.status)) ? String(item.status) : 'watchlist';
@@ -153,14 +175,29 @@ const buildUserMovieUpsert = (db, userId, item) => {
   );
 };
 
+const ensureUserExists = async (db, userId) => {
+  const user = await db.prepare('SELECT id FROM users WHERE id = ? LIMIT 1').bind(userId).first();
+  return Boolean(user);
+};
+
+const readBody = async request => {
+  try {
+    return await request.json();
+  } catch {
+    return null;
+  }
+};
+
 async function bulkImportLibrary(context, body) {
   const db = getDb(context);
   if (!db) return json({ error: 'Личная кинотека временно недоступна.' }, 503);
-  const userId = resolveUserId(context.request);
+  const userId = await resolveUserId(context);
+  if (!userId) return unauthorized();
+
   const items = Array.isArray(body?.items) ? body.items : [];
   if (!items.length) return json({ ok: true, userId, imported: 0, skipped: 0 });
   if (items.length > 1500) return json({ error: 'Слишком много фильмов за один импорт.' }, 400);
-  if (!(await ensureUserExists(db, userId))) return json({ error: 'Тестовый пользователь не найден.' }, 404);
+  if (!(await ensureUserExists(db, userId))) return json({ error: 'Пользователь не найден.' }, 404);
 
   let imported = 0;
   let skipped = 0;
@@ -187,35 +224,6 @@ async function bulkImportLibrary(context, body) {
     return json({ error: 'Не удалось перенести личную кинотеку.', details: String(error?.message || error), imported, skipped }, 500);
   }
 }
-
-// Temporary MVP identity resolver. Later this function is the only place that
-// needs to change when Telegram initData verification is connected.
-const resolveUserId = () => TEST_USER_ID;
-
-const ensureUserExists = async (db, userId) => {
-  const user = await db.prepare('SELECT id FROM users WHERE id = ? LIMIT 1').bind(userId).first();
-  return Boolean(user);
-};
-
-const readBody = async request => {
-  try {
-    return await request.json();
-  } catch {
-    return null;
-  }
-};
-
-const validateKinopoiskId = value => {
-  const id = asInt(value);
-  return id && id > 0 ? id : null;
-};
-
-const validateRating = value => {
-  if (value === null || value === '' || typeof value === 'undefined') return { ok: true, value: null };
-  const rating = asInt(value);
-  if (rating == null || rating < 1 || rating > 10) return { ok: false, value: null };
-  return { ok: true, value: rating };
-};
 
 const getLibraryItem = async (db, userId, kinopoiskId) => db.prepare(`
   SELECT
@@ -256,7 +264,9 @@ export async function onRequestGet(context) {
   const db = getDb(context);
   if (!db) return json({ error: 'Личная кинотека временно недоступна.' }, 503);
 
-  const userId = resolveUserId(context.request);
+  const userId = await resolveUserId(context);
+  if (!userId) return unauthorized();
+
   const url = new URL(context.request.url);
   const status = String(url.searchParams.get('status') || '').trim();
   const forTonightOnly = url.searchParams.get('forTonight') === '1';
@@ -267,9 +277,7 @@ export async function onRequestGet(context) {
   }
 
   try {
-    if (!(await ensureUserExists(db, userId))) {
-      return json({ error: 'Тестовый пользователь не найден.' }, 404);
-    }
+    if (!(await ensureUserExists(db, userId))) return json({ error: 'Пользователь не найден.' }, 404);
 
     if (kinopoiskId) {
       const row = await getLibraryItem(db, userId, kinopoiskId);
@@ -316,9 +324,7 @@ export async function onRequestGet(context) {
       FROM user_movies um
       JOIN movies m ON m.kinopoisk_id = um.kinopoisk_id
       WHERE ${where.join(' AND ')}
-      ORDER BY
-        um.for_tonight DESC,
-        COALESCE(um.updated_at, um.created_at) DESC
+      ORDER BY um.for_tonight DESC, COALESCE(um.updated_at, um.created_at) DESC
     `).bind(...binds).all();
 
     const items = (result.results || []).map(normalizeLibraryRow);
@@ -332,7 +338,9 @@ async function upsertLibraryItem(context, mode) {
   const db = getDb(context);
   if (!db) return json({ error: 'Личная кинотека временно недоступна.' }, 503);
 
-  const userId = resolveUserId(context.request);
+  const userId = await resolveUserId(context);
+  if (!userId) return unauthorized();
+
   const body = await readBody(context.request);
   if (!body) return json({ error: 'Некорректное тело запроса.' }, 400);
 
@@ -350,9 +358,7 @@ async function upsertLibraryItem(context, mode) {
   if (!rating.ok) return json({ error: 'Личная оценка должна быть целым числом от 1 до 10.' }, 400);
 
   try {
-    if (!(await ensureUserExists(db, userId))) {
-      return json({ error: 'Тестовый пользователь не найден.' }, 404);
-    }
+    if (!(await ensureUserExists(db, userId))) return json({ error: 'Пользователь не найден.' }, 404);
 
     const movie = await db.prepare('SELECT kinopoisk_id FROM movies WHERE kinopoisk_id = ? LIMIT 1')
       .bind(kinopoiskId)
@@ -381,9 +387,7 @@ async function upsertLibraryItem(context, mode) {
       watchedAt = watchedAt || now;
     }
 
-    if ((status === 'watchlist' || status === 'rewatch') && !addedAt) {
-      addedAt = now;
-    }
+    if ((status === 'watchlist' || status === 'rewatch') && !addedAt) addedAt = now;
 
     if (forTonight && status !== 'watched') {
       selectedForTonightAt = selectedForTonightAt || now;
@@ -400,17 +404,8 @@ async function upsertLibraryItem(context, mode) {
 
     await db.prepare(`
       INSERT INTO user_movies (
-        user_id,
-        kinopoisk_id,
-        status,
-        for_tonight,
-        personal_rating,
-        watched_at,
-        added_at,
-        selected_for_tonight_at,
-        note,
-        created_at,
-        updated_at
+        user_id, kinopoisk_id, status, for_tonight, personal_rating, watched_at,
+        added_at, selected_for_tonight_at, note, created_at, updated_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
       ON CONFLICT(user_id, kinopoisk_id) DO UPDATE SET
         status = excluded.status,
@@ -422,15 +417,8 @@ async function upsertLibraryItem(context, mode) {
         note = excluded.note,
         updated_at = CURRENT_TIMESTAMP
     `).bind(
-      userId,
-      kinopoiskId,
-      status,
-      forTonight ? 1 : 0,
-      personalRating,
-      watchedAt,
-      addedAt,
-      selectedForTonightAt,
-      note
+      userId, kinopoiskId, status, forTonight ? 1 : 0, personalRating,
+      watchedAt, addedAt, selectedForTonightAt, note
     ).run();
 
     const saved = await getLibraryItem(db, userId, kinopoiskId);
@@ -455,7 +443,9 @@ export async function onRequestDelete(context) {
   const db = getDb(context);
   if (!db) return json({ error: 'Личная кинотека временно недоступна.' }, 503);
 
-  const userId = resolveUserId(context.request);
+  const userId = await resolveUserId(context);
+  if (!userId) return unauthorized();
+
   const url = new URL(context.request.url);
   let kinopoiskId = validateKinopoiskId(url.searchParams.get('kinopoiskId'));
 

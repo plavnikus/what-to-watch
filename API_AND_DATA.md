@@ -98,13 +98,18 @@ CREATE TABLE IF NOT EXISTS movies (
 
 ## 5. users
 
-Таблица `users` уже поддерживает Telegram identity через `telegram_user_id`, а также имя, username и avatar URL.
+Таблица `users` поддерживает Telegram identity через `telegram_user_id`, а также имя, username и avatar URL.
 
-До завершения подключения Telegram к `/api/user-library` текущий интерфейс продолжает работать через временного пользователя:
+Telegram-пользователь получает отдельный внутренний `id` формата `telegram:<telegram_user_id>`, а `telegram_user_id` используется как уникальная внешняя identity. `user_movies` привязывается к внутреннему `users.id`, а не напрямую к сырому Telegram ID.
 
-`local_test_user`
+Проверено на Preview:
 
-Telegram-пользователь получает отдельный внутренний `id`, а `telegram_user_id` используется как уникальная внешняя identity. Это позволяет не привязывать `user_movies` напрямую к формату Telegram ID.
+- `Telegram.WebApp.initData` успешно приходит из Mini App;
+- сервер проверяет подпись и `auth_date`;
+- пользователь создаётся/обновляется в `users`;
+- личная кинотека читается уже по подтверждённому Telegram-пользователю.
+
+`local_test_user` больше не используется `/api/user-library` как текущий resolver. Он временно сохранён только как источник резервной копии старой миграции до окончательного завершения перехода.
 
 ## 6. user_movies
 
@@ -158,26 +163,26 @@ Telegram-пользователь получает отдельный внутр
 
 ## 8. Серверная личная кинотека
 
-Серверная миграция завершена.
+Первичная серверная миграция создала 1098 `user_movies` для `local_test_user`.
 
-Контрольное состояние после миграции:
+На Telegram-этапе эти 1098 записей безопасно скопированы на подтверждённого владельца через защищённый `/api/legacy-library-claim`. Исходные записи `local_test_user` пока сохранены как резерв до финального Production-аудита.
 
-- `user_movies`: 1098 позиций;
-- все реальные позиции были связаны с `local_test_user`;
-- серверное чтение и запись проверены.
+Проверено на Preview под Telegram identity:
 
-Проверено сохранение после перезагрузки:
-
-- включения «На вечер»;
-- снятия «На вечер».
+- читаются все 1098 позиций;
+- включение «На вечер» записывается на сервер;
+- после закрытия и повторного открытия Mini App «На вечер» остаётся сохранённым;
+- данные `local_test_user` не подмешиваются другому Telegram-пользователю автоматически.
 
 Сервер — основной источник состояния.
 
 `localStorage` остаётся:
 
 - локальным cache/fallback;
-- источником первоначальной миграции;
-- очередью повторной синхронизации при временной сетевой ошибке.
+- очередью повторной синхронизации при временной сетевой ошибке;
+- хранит идентификатор последнего Telegram-пользователя для очистки пользовательского cache при смене аккаунта.
+
+При смене Telegram user frontend удаляет локальные `movieAppImportedMoviesV1`, `movieAppStatesV1` и `movieAppPendingLibrarySyncV1`, чтобы исключить смешивание личных данных между аккаунтами.
 
 ## 9. Исправление неизвестных рейтингов
 
@@ -246,7 +251,9 @@ GET /api/catalog-search?preset=starter
 
 ### /api/user-library
 
-Пока работает с личной кинотекой `local_test_user`. Следующий шаг Telegram-этапа — заменить временный resolver на серверно подтверждённую Telegram identity, не меняя контракт `user_movies`.
+Работает только с подтверждённой Telegram-сессией. Временный `resolveUserId() => local_test_user` удалён.
+
+Если валидной серверной сессии нет, endpoint возвращает `401` и не выдаёт чужую библиотеку.
 
 Поддерживает:
 
@@ -261,7 +268,7 @@ GET /api/catalog-search?preset=starter
 
 ### POST /api/telegram-auth
 
-Первый серверный слой Telegram Mini App identity.
+Серверная проверка Telegram Mini App identity.
 
 Запрос должен передавать сырую строку `Telegram.WebApp.initData` в заголовке:
 
@@ -289,6 +296,38 @@ x-telegram-init-data: <raw initData>
 - `TELEGRAM_BOT_TOKEN`.
 
 `GET /api/telegram-auth` не поддерживается.
+
+### POST /api/telegram-session
+
+Создаёт пользовательскую серверную сессию после повторной серверной проверки Telegram `initData`.
+
+Порядок:
+
+1. `telegram-entry.html` получает `Telegram.WebApp.initData`;
+2. отправляет его в `x-telegram-init-data` на `/api/telegram-session`;
+3. endpoint использует тот же безопасный Telegram verifier;
+4. после успешной проверки создаётся подписанный HMAC session token;
+5. token записывается в cookie `wtw_session` с атрибутами `HttpOnly; Secure; SameSite=Lax`;
+6. `/api/user-library` извлекает `userId` только из валидной подписанной session cookie.
+
+По умолчанию срок сессии — 24 часа. При необходимости может быть изменён через `TELEGRAM_SESSION_TTL_SECONDS`.
+
+Bot token во frontend не передаётся.
+
+### POST /api/legacy-library-claim
+
+Одноразовый переходный endpoint для безопасной привязки старой библиотеки `local_test_user` к подтверждённому владельцу Telegram.
+
+Правила:
+
+- требуется валидная Telegram session cookie;
+- серверная переменная `LEGACY_LIBRARY_OWNER_USER_ID` явно задаёт единственного разрешённого получателя;
+- если текущий `session.userId` не совпадает с этим значением, возвращается `403`;
+- записи копируются из `local_test_user` через `ON CONFLICT DO NOTHING`;
+- исходные записи не удаляются;
+- повторный вызов идемпотентен и не создаёт дублей.
+
+После подтверждения Production-перехода этот endpoint и переменная должны быть удалены/отключены как временная миграционная инфраструктура.
 
 ### POST /api/catalog-enrich
 
@@ -329,11 +368,12 @@ x-telegram-init-data: <raw initData>
 
 Queue-safe успешный сценарий проверен на Preview: `requested=1`, `attempted=1`, `enriched=1`, `failed=0`, `stopped=false`.
 
-Используемые server-side secrets:
+Используемые server-side secrets/variables:
 
-- `POISKKINO_API_TOKEN`;
-- `CATALOG_ENRICH_KEY`;
-- `TELEGRAM_BOT_TOKEN` — после подключения Telegram Mini App.
+- `POISKKINO_API_TOKEN` — Secret;
+- `CATALOG_ENRICH_KEY` — Secret;
+- `TELEGRAM_BOT_TOKEN` — Secret;
+- `LEGACY_LIBRARY_OWNER_USER_ID` — временная обычная переменная только на период переноса старой библиотеки.
 
 ### GitHub Actions: ежедневное обогащение
 
@@ -367,6 +407,8 @@ Workflow `.github/workflows/catalog-enrichment.yml` используется д�
 
 Он не должен появляться в документации как рабочий endpoint.
 
+Временная диагностическая страница `telegram-auth-check.html` также удалена после успешной проверки Telegram identity и не является частью рабочего продукта.
+
 ## 12. Источники метаданных
 
 Текущий серверный источник обогащения — ПоискКино API.
@@ -394,7 +436,7 @@ Frontend не должен содержать его секреты и не до
 1. по требованию при открытии карточки через `/api/movie-details`;
 2. пакетно через защищённый `/api/catalog-enrich`, включая ежедневный GitHub Actions scheduled-run.
 
-После завершения фоновой очереди проводится финальный аудит: остаток `library_migration`, количество `library_migration_failed`, полнота ключевых полей каталога и сохранность всех 1098 связей `user_movies`. Этот аудит не блокирует Telegram-разработку.
+После завершения фоновой очереди проводится финальный аудит: остаток `library_migration`, количество `library_migration_failed`, полнота ключевых полей каталога и сохранность пользовательских связей `user_movies`. Этот аудит не блокирует Telegram-разработку.
 
 ## 14. Фильтры
 
@@ -433,22 +475,32 @@ Frontend не должен содержать его секреты и не до
 - Frontend не считается доверенной средой.
 - Telegram `initDataUnsafe` нельзя использовать как доказательство identity.
 - Telegram `initData` проверяется сервером до использования Telegram user ID.
-- Все пользовательские изменения должны проверяться на сервере.
+- После проверки Telegram identity пользовательские API работают через подписанную HttpOnly session cookie.
+- Все пользовательские изменения проверяются на сервере.
 - Пользователь имеет доступ только к собственным `user_movies`.
+- Старую библиотеку `local_test_user` может забрать только явно настроенный `LEGACY_LIBRARY_OWNER_USER_ID`.
 - Внешним поставщикам каталога не передаются личные пользовательские данные.
 
 ## 16. Telegram — текущий этап
 
-Порядок:
+Реализовано и проверено на Preview:
 
-1. серверная проверка `initData` — реализована как foundation;
-2. создание/обновление пользователя в `users` — реализовано в `/api/telegram-auth`;
-3. подключение Telegram Web App SDK во frontend;
-4. передача `initData` в пользовательские API-запросы;
-5. замена временного `resolveUserId() => local_test_user` на проверенную identity;
-6. использование того же `user_movies` без переписывания основной модели;
-7. настройка BotFather / Main Mini App;
-8. проверка нескольких независимых пользователей.
+1. серверная проверка `initData`;
+2. создание/обновление пользователя в `users`;
+3. `telegram-entry.html` с Telegram Web App SDK;
+4. серверная session cookie через `/api/telegram-session`;
+5. `/api/user-library` переведён с `local_test_user` на проверенную Telegram identity;
+6. локальный cache очищается при смене Telegram-пользователя;
+7. BotFather / Menu Button настроены;
+8. 1098 старых записей безопасно скопированы владельцу;
+9. проверена запись «На вечер» и сохранение после повторного открытия Mini App.
+
+Осталось проверить:
+
+1. независимость двух разных Telegram-пользователей;
+2. одну и ту же библиотеку одного Telegram-пользователя на втором устройстве;
+3. Production deployment и переключение BotFather Menu Button на Production `telegram-entry.html`;
+4. после Production-аудита удалить временную legacy-миграцию.
 
 ## 17. Не входит в текущий MVP
 
