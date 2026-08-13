@@ -49,7 +49,17 @@ h1{font-size:24px;margin:0 0 8px}p{margin:0;color:#6f7787;line-height:1.45}.erro
       localStorage.removeItem('movieAppPendingLibrarySyncV1');
     }
     localStorage.setItem('movieAppTelegramUserIdV1',currentUserId);
-    localStorage.removeItem('movieAppServerLibraryMigratedV1');
+
+    message.textContent='Проверяем вашу сохранённую кинотеку…';
+    const claimResponse=await fetch('/api/legacy-library-claim',{
+      method:'POST',
+      cache:'no-store',
+      credentials:'same-origin'
+    });
+    const claim=await claimResponse.json().catch(()=>({}));
+    if(!claimResponse.ok||!claim.ok)throw new Error(claim.error||'Не удалось привязать сохранённую кинотеку.');
+
+    localStorage.setItem('movieAppServerLibraryMigratedV1','1');
     location.replace('/');
   }catch(error){
     spinner.style.display='none';
