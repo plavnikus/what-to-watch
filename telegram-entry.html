@@ -61,7 +61,9 @@ h1{font-size:24px;margin:0 0 8px}p{margin:0;color:#6f7787;line-height:1.45}.erro
         credentials:'same-origin'
       });
       const claim=await claimResponse.json().catch(()=>({}));
-      if(!claimResponse.ok||!claim.ok)throw new Error(claim.error||'Не удалось проверить сохранённую кинотеку.');
+      if(claimResponse.status!==403&&(!claimResponse.ok||!claim.ok)){
+        throw new Error(claim.error||'Не удалось проверить сохранённую кинотеку.');
+      }
       localStorage.setItem(LEGACY_CLAIM_KEY,currentUserId);
     }
 
