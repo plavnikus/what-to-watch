@@ -181,7 +181,6 @@ input{width:100%;border:1px solid var(--line);background:var(--panel2);color:var
 .catalog-starter-meta{font-size:12px;color:var(--muted);line-height:1.35}
 .toast.show{display:flex}
 
-
 .bookmark-btn{
   width:40px;height:40px;flex:0 0 40px;
   border:0;background:transparent;color:var(--muted);
@@ -208,7 +207,6 @@ input{width:100%;border:1px solid var(--line);background:var(--panel2);color:var
 .catalog-card .poster{width:92px}
 .catalog-card:active{transform:scale(.987)}
 .similar-card .genre-line{min-height:30px;line-height:1.3;margin-top:5px}
-
 
 .home-destinations{margin-top:16px}.home-destination{min-height:74px;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:7px;text-align:left}.home-destination-icon{font-size:23px;line-height:1}.home-status-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}.home-status-card{min-height:118px;display:flex;flex-direction:column;justify-content:flex-start;align-items:flex-start;gap:5px}.home-status-card strong{font-size:25px;line-height:1.05;margin-top:3px}.home-status-card .muted{font-size:12px;line-height:1.25}.home-status-icon{min-height:24px;font-size:20px;line-height:1}@media(max-width:390px){.home-status-grid{grid-template-columns:1fr}.home-status-card{min-height:auto;display:grid;grid-template-columns:28px 42px 1fr;align-items:center;padding:13px}.home-status-card strong{margin:0}}
 
@@ -268,7 +266,6 @@ input{width:100%;border:1px solid var(--line);background:var(--panel2);color:var
   }
 }
 
-
 /* Kinopoisk import */
 .library-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px}
 .library-head h2{margin-bottom:0}
@@ -286,6 +283,44 @@ input{width:100%;border:1px solid var(--line);background:var(--panel2);color:var
 .enrichment-status{display:none;margin-top:10px;padding:11px 12px;border:1px solid var(--line);border-radius:14px;background:var(--panel2);font-size:13px;line-height:1.45}
 .enrichment-status.show{display:block}.enrichment-status.error{color:var(--danger)}
 @media(max-width:380px){.library-head{align-items:center}.import-launch{padding:10px;font-size:12px}}
+
+/* Responsive hardening: compact phones, Telegram safe areas, long content */
+html,body{width:100%;max-width:100%;overflow-x:hidden}
+.app{width:100%}
+.topbar>div,.quick-choice>div:first-child,.movie-card>div,.catalog-card>div,.catalog-head>div,.detail-title-row h2,.filter-row>span:first-child,.filter-row .value{min-width:0}
+.quick-choice .muted,.movie-card h3,.catalog-card h3,.detail-title-row h2,.filter-row>span{overflow-wrap:anywhere}
+main{padding-bottom:calc(92px + env(safe-area-inset-bottom))}
+.nav{padding-bottom:env(safe-area-inset-bottom)}
+.nav button{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.home-status-card{min-width:0;overflow:hidden}
+.home-status-card strong,.home-status-card .muted{min-width:0}
+
+@media(min-width:391px) and (max-width:430px){
+  .home-status-card{padding:11px}
+  .home-status-card strong{font-size:23px}
+  .home-status-card .muted{font-size:11px}
+}
+
+@media(max-width:390px){
+  .home-status-card{grid-template-columns:28px max-content minmax(0,1fr);column-gap:12px}
+  .home-status-card strong{margin:0;font-size:clamp(22px,7vw,25px);white-space:nowrap}
+  .home-status-card .muted{overflow-wrap:anywhere}
+}
+
+@media(max-width:350px){
+  main{padding-left:12px;padding-right:12px}
+  .hero{padding:16px}
+  h1{font-size:clamp(24px,8vw,28px)}
+  h2{font-size:22px}
+  .actions,.searchbar{grid-template-columns:1fr}
+  .movie-card,.catalog-card{grid-template-columns:72px minmax(0,1fr);gap:10px;padding-right:42px}
+  .movie-card .poster,.catalog-card .poster{width:72px}
+  .nav button{font-size:11px;padding-left:1px;padding-right:1px}
+  .type-options,.year-presets,.year-range,.sheet-actions{grid-template-columns:1fr}
+  .filter-row{gap:8px;padding-left:12px;padding-right:12px}
+  .filter-row .value{font-size:13px}
+  .sheet{padding-left:12px;padding-right:12px}
+}
 
 </style>
 </head>
@@ -558,8 +593,6 @@ input{width:100%;border:1px solid var(--line);background:var(--panel2);color:var
   </div>
 </div>
 
-
-
 <div id="importOverlay" class="overlay">
   <div class="sheet">
     <div class="handle"></div>
@@ -614,8 +647,7 @@ const seedMovies=[
 {id:'m9',title:'Чернобыль',type:'mini',genres:['Драма'],kp:8.8,imdb:9.3,year:2019,time:'5 серий',desc:'История аварии на Чернобыльской АЭС и людей, которые боролись с её последствиями.',kpUrl:'https://www.kinopoisk.ru/index.php?kp_query=%D0%A7%D0%B5%D1%80%D0%BD%D0%BE%D0%B1%D1%8B%D0%BB%D1%8C',imdbUrl:'https://www.imdb.com/title/tt7366338/',trailer:'https://www.youtube.com/results?search_query=Чернобыль+сериал+трейлер'},
 {id:'m10',title:'Оленёнок',type:'mini',genres:['Драма','Триллер'],kp:7.4,imdb:7.7,year:2024,time:'7 серий',desc:'Случайная доброта превращается в навязчивое преследование.',kpUrl:'https://www.kinopoisk.ru/index.php?kp_query=%D0%9E%D0%BB%D0%B5%D0%BD%D1%91%D0%BD%D0%BE%D0%BA',imdbUrl:'https://www.imdb.com/title/tt13649112/',trailer:'https://www.youtube.com/results?search_query=Оленёнок+сериал+трейлер'},
 {id:'m11',title:'Субстанция',type:'film',genres:['Ужасы','Драма'],kp:7.3,imdb:7.2,year:2024,time:'2 ч 21 мин',desc:'Звезда телевидения пробует препарат, создающий более молодую версию самой себя.',kpUrl:'https://www.kinopoisk.ru/index.php?kp_query=%D0%A1%D1%83%D0%B1%D1%81%D1%82%D0%B0%D0%BD%D1%86%D0%B8%D1%8F',imdbUrl:'https://www.imdb.com/title/tt17526714/',trailer:'https://www.youtube.com/results?search_query=Субстанция+трейлер'},
-{id:'m12',title:'Носферату',type:'film',genres:['Ужасы','Драма'],kp:7.2,imdb:7.2,year:2024,time:'2 ч 12 мин',desc:'Древний вампир преследует молодую женщину и несёт ужас в её город.',kpUrl:'https://www.kinopoisk.ru/index.php?kp_query=%D0%9D%D0%BE%D1%81%D1%84%D0%B5%D1%80%D0%B0%D1%82%D1%83',imdbUrl:'https://www.imdb.com/title/tt5040012/',trailer:'https://www.youtube.com/results?search_query=Носферату+2024+трейлер'}
-,
+{id:'m12',title:'Носферату',type:'film',genres:['Ужасы','Драма'],kp:7.2,imdb:7.2,year:2024,time:'2 ч 12 мин',desc:'Древний вампир преследует молодую женщину и несёт ужас в её город.',kpUrl:'https://www.kinopoisk.ru/index.php?kp_query=%D0%9D%D0%BE%D1%81%D1%84%D0%B5%D1%80%D0%B0%D1%82%D1%83',imdbUrl:'https://www.imdb.com/title/tt5040012/',trailer:'https://www.youtube.com/results?search_query=Носферату+2024+трейлер'},
 {id:'m13',title:'Дюна: Часть вторая',type:'film',genres:['Фантастика','Драма'],kp:8.2,imdb:8.5,year:2024,time:'2 ч 46 мин',desc:'Пол Атрейдес объединяется с фременами и готовится отомстить заговорщикам, уничтожившим его семью.',kpUrl:'https://www.kinopoisk.ru/index.php?kp_query=%D0%94%D1%8E%D0%BD%D0%B0%3A%20%D0%A7%D0%B0%D1%81%D1%82%D1%8C%20%D0%B2%D1%82%D0%BE%D1%80%D0%B0%D1%8F',imdbUrl:'https://www.imdb.com/title/tt15239678/',trailer:'https://www.youtube.com/results?search_query=Дюна+Часть+вторая+трейлер'},
 {id:'m14',title:'Микки 17',type:'film',genres:['Фантастика','Комедия'],kp:6.8,imdb:6.8,year:2025,time:'2 ч 17 мин',desc:'Участник космической экспедиции после каждой гибели получает новое тело и продолжает опасную работу.',kpUrl:'https://www.kinopoisk.ru/index.php?kp_query=%D0%9C%D0%B8%D0%BA%D0%BA%D0%B8%2017',imdbUrl:'https://www.imdb.com/title/tt12299608/',trailer:'https://www.youtube.com/results?search_query=Микки+17+трейлер'}
 ];
@@ -624,163 +656,41 @@ const IMPORTED_MOVIES_KEY='movieAppImportedMoviesV1';
 const STATES_KEY='movieAppStatesV1';
 const SERVER_LIBRARY_MIGRATION_KEY='movieAppServerLibraryMigratedV1';
 const PENDING_LIBRARY_SYNC_KEY='movieAppPendingLibrarySyncV1';
-function readLocalJson(key,fallback){
-  try{const value=JSON.parse(localStorage.getItem(key));return value??fallback}catch{return fallback}
-}
+function readLocalJson(key,fallback){try{const value=JSON.parse(localStorage.getItem(key));return value??fallback}catch{return fallback}}
 function normalizeImportedMovie(item){
   const kinopoiskId=String(item.kinopoiskId||item.externalId||'').trim();
   const title=String(item.title||'Без названия').trim();
   const type=['series','mini'].includes(item.type)?item.type:'film';
   const year=Number(item.year)||null;
-  return {
-    id:'kp_'+kinopoiskId,kinopoiskId,title,type,genres:Array.isArray(item.genres)?item.genres:[],
-    countries:Array.isArray(item.countries)?item.countries:[],
-    kp:Number(item.kp)>0?Number(item.kp):null,
-    imdb:Number(item.imdb)>0?Number(item.imdb):null,
-    year,time:String(item.time||''),
-    desc:String(item.desc||'Импортировано из публичного списка Кинопоиска. Полные данные будут добавлены после подключения каталога.'),
-    posterUrl:String(item.posterUrl||''),backdropUrl:String(item.backdropUrl||''),originalTitle:String(item.originalTitle||''),
-    kpUrl:String(item.kpUrl||('https://www.kinopoisk.ru/'+(type==='series'?'series':'film')+'/'+kinopoiskId+'/')),
-    imdbUrl:String(item.imdbUrl||''),trailer:String(item.trailer||('https://www.youtube.com/results?search_query='+encodeURIComponent(title+' трейлер'))),
-    enrichedAt:item.enrichedAt||null,imported:true
-  };
+  return {id:'kp_'+kinopoiskId,kinopoiskId,title,type,genres:Array.isArray(item.genres)?item.genres:[],countries:Array.isArray(item.countries)?item.countries:[],kp:Number(item.kp)>0?Number(item.kp):null,imdb:Number(item.imdb)>0?Number(item.imdb):null,year,time:String(item.time||''),desc:String(item.desc||'Импортировано из публичного списка Кинопоиска. Полные данные будут добавлены после подключения каталога.'),posterUrl:String(item.posterUrl||''),backdropUrl:String(item.backdropUrl||''),originalTitle:String(item.originalTitle||''),kpUrl:String(item.kpUrl||('https://www.kinopoisk.ru/'+(type==='series'?'series':'film')+'/'+kinopoiskId+'/')),imdbUrl:String(item.imdbUrl||''),trailer:String(item.trailer||('https://www.youtube.com/results?search_query='+encodeURIComponent(title+' трейлер'))),enrichedAt:item.enrichedAt||null,imported:true};
 }
 const importedMovies=readLocalJson(IMPORTED_MOVIES_KEY,[]).map(normalizeImportedMovie).filter(m=>m.kinopoiskId);
 let movies=[...seedMovies,...importedMovies.filter(item=>!seedMovies.some(seed=>seed.kinopoiskId&&seed.kinopoiskId===item.kinopoiskId))];
 let genres=[...new Set(movies.flatMap(m=>m.genres))].sort();
 const savedStates=readLocalJson(STATES_KEY,{});
-const states=Object.fromEntries(movies.map(m=>{
-  const fallback={status:m.kinopoiskId?'watchlist':'none',forTonight:false,userRating:null,watchedDate:null};
-  if(!m.kinopoiskId)return [m.id,fallback];
-  const saved=savedStates[m.id]||{};
-  return [m.id,{...fallback,...saved,forTonight:Boolean(saved.forTonight)}];
-}));
+const states=Object.fromEntries(movies.map(m=>{const fallback={status:m.kinopoiskId?'watchlist':'none',forTonight:false,userRating:null,watchedDate:null};if(!m.kinopoiskId)return [m.id,fallback];const saved=savedStates[m.id]||{};return [m.id,{...fallback,...saved,forTonight:Boolean(saved.forTonight)}];}));
 function persistStates(){localStorage.setItem(STATES_KEY,JSON.stringify(states))}
 function readPendingLibrarySync(){return readLocalJson(PENDING_LIBRARY_SYNC_KEY,{})}
 function savePendingLibrarySync(value){localStorage.setItem(PENDING_LIBRARY_SYNC_KEY,JSON.stringify(value))}
-function localWatchedDateToIso(value){
-  const text=String(value||'').trim();
-  const match=text.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
-  return match?`${match[3]}-${match[2]}-${match[1]}T12:00:00.000Z`:(text||null);
-}
-function serverWatchedDate(value){
-  if(!value)return null;
-  const date=new Date(value);
-  if(Number.isNaN(date.getTime()))return String(value);
-  return String(date.getUTCDate()).padStart(2,'0')+'.'+String(date.getUTCMonth()+1).padStart(2,'0')+'.'+date.getUTCFullYear();
-}
-function libraryMovieSeed(movie){
-  return {
-    title:movie.title,originalTitle:movie.originalTitle||'',year:movie.year,type:movie.type,
-    genres:movie.genres||[],countries:movie.countries||[],kp:movie.kp,imdb:movie.imdb,time:movie.time||'',
-    posterUrl:movie.posterUrl||'',kpUrl:movie.kpUrl||'',imdbUrl:movie.imdbUrl||'',trailer:movie.trailer||''
-  };
-}
-function libraryPayloadForMovie(movie){
-  const st=states[movie.id]||{status:'none',forTonight:false,userRating:null,watchedDate:null};
-  return {
-    kinopoiskId:String(movie.kinopoiskId||''),status:st.status||'none',forTonight:Boolean(st.forTonight),
-    personalRating:st.userRating??null,watchedAt:localWatchedDateToIso(st.watchedDate),movie:libraryMovieSeed(movie)
-  };
-}
-async function sendLibraryMutation(payload){
-  const response=await fetch('/api/user-library',{method:'PATCH',headers:{'Content-Type':'application/json'},cache:'no-store',body:JSON.stringify(payload)});
-  const data=await response.json().catch(()=>({}));
-  if(!response.ok)throw new Error(data.error||'Не удалось сохранить изменение.');
-  return data;
-}
-async function syncLibraryState(id){
-  const movie=movies.find(item=>item.id===id);
-  if(!movie?.kinopoiskId)return;
-  const payload=libraryPayloadForMovie(movie);
-  const pending=readPendingLibrarySync();
-  pending[payload.kinopoiskId]=payload;
-  savePendingLibrarySync(pending);
-  try{
-    await sendLibraryMutation(payload);
-    const latest=readPendingLibrarySync();
-    delete latest[payload.kinopoiskId];
-    savePendingLibrarySync(latest);
-  }catch(error){console.warn('Library sync deferred:',error)}
-}
-async function flushPendingLibrarySync(){
-  const pending=readPendingLibrarySync();
-  for(const [kinopoiskId,payload] of Object.entries(pending)){
-    try{
-      await sendLibraryMutation(payload);
-      const latest=readPendingLibrarySync();delete latest[kinopoiskId];savePendingLibrarySync(latest);
-    }catch{break}
-  }
-}
-function normalizeServerLibraryMovie(item){
-  const movie=item?.movie||{};
-  return normalizeImportedMovie({
-    kinopoiskId:movie.kinopoiskId,title:movie.title,originalTitle:movie.originalTitle,year:movie.year,type:movie.type,
-    genres:movie.genres,countries:movie.countries,kp:movie.kp,imdb:movie.imdb,time:movie.time,desc:movie.desc,
-    posterUrl:movie.posterUrl,backdropUrl:movie.backdropUrl,kpUrl:movie.kpUrl,imdbUrl:movie.imdbUrl,trailer:movie.trailer,
-    enrichedAt:item.updatedAt||null
-  });
-}
-function applyServerLibrary(items){
-  let changedMovies=false;
-  for(const item of Array.isArray(items)?items:[]){
-    const kp=String(item.kinopoiskId||'');
-    if(!kp)continue;
-    let movie=movies.find(entry=>String(entry.kinopoiskId||'')===kp);
-    if(!movie&&item.movie){movie=normalizeServerLibraryMovie(item);movies.push(movie);changedMovies=true}
-    if(!movie)continue;
-    states[movie.id]={
-      status:item.status||'none',forTonight:Boolean(item.forTonight),
-      userRating:item.personalRating??null,watchedDate:serverWatchedDate(item.watchedAt)
-    };
-  }
-  if(changedMovies)genres=[...new Set(movies.flatMap(m=>m.genres))].sort();
-  persistImportedMovies();persistStates();
-  renderLibrary();renderCatalog();
-}
-async function migrateLocalLibraryToServer(){
-  if(localStorage.getItem(SERVER_LIBRARY_MIGRATION_KEY)==='1')return false;
-  const items=movies.filter(movie=>movie.kinopoiskId).map(libraryPayloadForMovie).filter(item=>item.status!=='none'||item.forTonight||item.personalRating!=null);
-  if(items.length){
-    const response=await fetch('/api/user-library',{method:'POST',headers:{'Content-Type':'application/json'},cache:'no-store',body:JSON.stringify({items})});
-    const data=await response.json().catch(()=>({}));
-    if(!response.ok)throw new Error(data.error||'Не удалось перенести кинотеку.');
-  }
-  localStorage.setItem(SERVER_LIBRARY_MIGRATION_KEY,'1');
-  return items.length>0;
-}
-async function initializeServerLibrary(){
-  try{
-    await flushPendingLibrarySync();
-    const migrated=await migrateLocalLibraryToServer();
-    const response=await fetch('/api/user-library',{cache:'no-store'});
-    const data=await response.json().catch(()=>({}));
-    if(!response.ok)throw new Error(data.error||'Не удалось загрузить кинотеку.');
-    applyServerLibrary(data.items||[]);
-    if(migrated)showToast('✓ Кинотека сохранена на сервере');
-  }catch(error){
-    console.warn('Server library unavailable, using local cache:',error);
-  }
-}
-function persistImportedMovies(){
-  localStorage.setItem(IMPORTED_MOVIES_KEY,JSON.stringify(movies.filter(m=>m.imported).map(m=>({kinopoiskId:m.kinopoiskId,title:m.title,originalTitle:m.originalTitle,year:m.year,type:m.type,genres:m.genres,countries:m.countries,kp:m.kp,imdb:m.imdb,time:m.time,desc:m.desc,posterUrl:m.posterUrl,backdropUrl:m.backdropUrl,kpUrl:m.kpUrl,imdbUrl:m.imdbUrl,trailer:m.trailer,enrichedAt:m.enrichedAt}))));
-}
+function localWatchedDateToIso(value){const text=String(value||'').trim();const match=text.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);return match?`${match[3]}-${match[2]}-${match[1]}T12:00:00.000Z`:(text||null);}
+function serverWatchedDate(value){if(!value)return null;const date=new Date(value);if(Number.isNaN(date.getTime()))return String(value);return String(date.getUTCDate()).padStart(2,'0')+'.'+String(date.getUTCMonth()+1).padStart(2,'0')+'.'+date.getUTCFullYear();}
+function libraryMovieSeed(movie){return {title:movie.title,originalTitle:movie.originalTitle||'',year:movie.year,type:movie.type,genres:movie.genres||[],countries:movie.countries||[],kp:movie.kp,imdb:movie.imdb,time:movie.time||'',posterUrl:movie.posterUrl||'',kpUrl:movie.kpUrl||'',imdbUrl:movie.imdbUrl||'',trailer:movie.trailer||''};}
+function libraryPayloadForMovie(movie){const st=states[movie.id]||{status:'none',forTonight:false,userRating:null,watchedDate:null};return {kinopoiskId:String(movie.kinopoiskId||''),status:st.status||'none',forTonight:Boolean(st.forTonight),personalRating:st.userRating??null,watchedAt:localWatchedDateToIso(st.watchedDate),movie:libraryMovieSeed(movie)};}
+async function sendLibraryMutation(payload){const response=await fetch('/api/user-library',{method:'PATCH',headers:{'Content-Type':'application/json'},cache:'no-store',body:JSON.stringify(payload)});const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.error||'Не удалось сохранить изменение.');return data;}
+async function syncLibraryState(id){const movie=movies.find(item=>item.id===id);if(!movie?.kinopoiskId)return;const payload=libraryPayloadForMovie(movie);const pending=readPendingLibrarySync();pending[payload.kinopoiskId]=payload;savePendingLibrarySync(pending);try{await sendLibraryMutation(payload);const latest=readPendingLibrarySync();delete latest[payload.kinopoiskId];savePendingLibrarySync(latest);}catch(error){console.warn('Library sync deferred:',error)}}
+async function flushPendingLibrarySync(){const pending=readPendingLibrarySync();for(const [kinopoiskId,payload] of Object.entries(pending)){try{await sendLibraryMutation(payload);const latest=readPendingLibrarySync();delete latest[kinopoiskId];savePendingLibrarySync(latest);}catch{break}}}
+function normalizeServerLibraryMovie(item){const movie=item?.movie||{};return normalizeImportedMovie({kinopoiskId:movie.kinopoiskId,title:movie.title,originalTitle:movie.originalTitle,year:movie.year,type:movie.type,genres:movie.genres,countries:movie.countries,kp:movie.kp,imdb:movie.imdb,time:movie.time,desc:movie.desc,posterUrl:movie.posterUrl,backdropUrl:movie.backdropUrl,kpUrl:movie.kpUrl,imdbUrl:movie.imdbUrl,trailer:movie.trailer,enrichedAt:item.updatedAt||null});}
+function applyServerLibrary(items){let changedMovies=false;for(const item of Array.isArray(items)?items:[]){const kp=String(item.kinopoiskId||'');if(!kp)continue;let movie=movies.find(entry=>String(entry.kinopoiskId||'')===kp);if(!movie&&item.movie){movie=normalizeServerLibraryMovie(item);movies.push(movie);changedMovies=true}if(!movie)continue;states[movie.id]={status:item.status||'none',forTonight:Boolean(item.forTonight),userRating:item.personalRating??null,watchedDate:serverWatchedDate(item.watchedAt)};}if(changedMovies)genres=[...new Set(movies.flatMap(m=>m.genres))].sort();persistImportedMovies();persistStates();renderLibrary();renderCatalog();}
+async function migrateLocalLibraryToServer(){if(localStorage.getItem(SERVER_LIBRARY_MIGRATION_KEY)==='1')return false;const items=movies.filter(movie=>movie.kinopoiskId).map(libraryPayloadForMovie).filter(item=>item.status!=='none'||item.forTonight||item.personalRating!=null);if(items.length){const response=await fetch('/api/user-library',{method:'POST',headers:{'Content-Type':'application/json'},cache:'no-store',body:JSON.stringify({items})});const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.error||'Не удалось перенести кинотеку.');}localStorage.setItem(SERVER_LIBRARY_MIGRATION_KEY,'1');return items.length>0;}
+async function initializeServerLibrary(){try{await flushPendingLibrarySync();const migrated=await migrateLocalLibraryToServer();const response=await fetch('/api/user-library',{cache:'no-store'});const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.error||'Не удалось загрузить кинотеку.');applyServerLibrary(data.items||[]);if(migrated)showToast('✓ Кинотека сохранена на сервере');}catch(error){console.warn('Server library unavailable, using local cache:',error);}}
+function persistImportedMovies(){localStorage.setItem(IMPORTED_MOVIES_KEY,JSON.stringify(movies.filter(m=>m.imported).map(m=>({kinopoiskId:m.kinopoiskId,title:m.title,originalTitle:m.originalTitle,year:m.year,type:m.type,genres:m.genres,countries:m.countries,kp:m.kp,imdb:m.imdb,time:m.time,desc:m.desc,posterUrl:m.posterUrl,backdropUrl:m.backdropUrl,kpUrl:m.kpUrl,imdbUrl:m.imdbUrl,trailer:m.trailer,enrichedAt:m.enrichedAt}))));}
 let currentId=null,activeTab='watchlist',selectedRating=null,currentFilterContext='library';
-let detailOrigin=null;
-let restoringDetailOrigin=false;
+let detailOrigin=null;let restoringDetailOrigin=false;
 let libraryFilters={types:[],genres:[],rating:0,yearFrom:null,yearTo:null,yearLabel:'Любой'};
 let catalogFilters={types:[],genres:[],rating:6,yearFrom:null,yearTo:null,yearLabel:'Любой'};
-let catalogResults=[];
-let catalogLoading=false;
-let catalogSearchTimer=null;
-let catalogStarterItems=[];
-let catalogStarterLoading=false;
-let activeCatalogPreset=null;
+let catalogResults=[];let catalogLoading=false;let catalogSearchTimer=null;let catalogStarterItems=[];let catalogStarterLoading=false;let activeCatalogPreset=null;
 const catalogPresetLabels={comedy:'Комедия',thriller:'Триллер',horror:'Ужасы',rating7:'Рейтинг 7+',short:'До 2 часов',new:'Новые'};
-let filters=libraryFilters;
-let draft=structuredClone(filters);
-let draftGenres=[];
-
+let filters=libraryFilters;let draft=structuredClone(filters);let draftGenres=[];
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const typeLabel=t=>t==='film'?'Фильм':t==='series'?'Сериал':'Мини-сериал';
 const ratingText=value=>Number.isFinite(value)?value.toFixed(1):'—';
@@ -789,809 +699,89 @@ const bookmarkIcon=saved=>`<svg class="bookmark-svg" viewBox="0 0 24 24" aria-hi
 const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const posterMarkup=m=>m.posterUrl?`<div class="poster has-image"><img src="${escapeHtml(m.posterUrl)}" alt="Постер: ${escapeHtml(m.title)}" loading="lazy"></div>`:`<div class="poster">${escapeHtml(m.title.toUpperCase())}</div>`;
 const currentFilters=()=>currentFilterContext==='catalog'?catalogFilters:libraryFilters;
-const setCurrentFilters=value=>{
-  if(currentFilterContext==='catalog')catalogFilters=value;
-  else libraryFilters=value;
-  filters=value;
-};
-
-
-function openLibraryTab(tab){
-  activeTab=tab;
-  $$('.library-tab').forEach(button=>{
-    button.classList.toggle('active',button.dataset.tab===tab);
-  });
-  go('library');
-}
-function activeScreenId(){
-  return $('.screen.active')?.id||'home';
-}
-function go(id,{scrollTop=0,behavior='smooth'}={}){
-  $$('.screen').forEach(s=>s.classList.remove('active'));
-  $('#'+id).classList.add('active');
-  const navScreen=id==='detail'?(detailOrigin?.screen||'library'):id;
-  $$('.nav button[data-screen]').forEach(b=>b.classList.toggle('active',b.dataset.screen===navScreen));
-  if(id==='library')renderLibrary();
-  if(id==='catalog'){renderCatalog();loadCatalogStarter();}
-  requestAnimationFrame(()=>window.scrollTo({top:scrollTop,behavior}));
-  updateStickyDetailBack();
-}
-function detailReturnLabel(screen){
-  if(screen==='catalog')return 'Вернуться в каталог';
-  if(screen==='library')return 'Вернуться в «Мои фильмы»';
-  if(screen==='settings')return 'Вернуться в настройки';
-  return 'Вернуться на главную';
-}
-function captureDetailOrigin(){
-  const screen=activeScreenId();
-  if(screen==='detail')return;
-  detailOrigin={
-    screen:['home','library','catalog','settings'].includes(screen)?screen:'home',
-    scrollY:window.scrollY,
-    catalogQuery:$('#catalogSearchInput')?.value||'',
-    libraryQuery:$('#searchInput')?.value||''
-  };
-}
-function performDetailReturn(){
-  const origin=detailOrigin||{screen:'library',scrollY:0};
-  restoringDetailOrigin=true;
-  if(origin.catalogQuery!=null&&$('#catalogSearchInput'))$('#catalogSearchInput').value=origin.catalogQuery;
-  if(origin.libraryQuery!=null&&$('#searchInput'))$('#searchInput').value=origin.libraryQuery;
-  go(origin.screen,{scrollTop:origin.scrollY||0,behavior:'auto'});
-  restoringDetailOrigin=false;
-}
-function returnFromDetail(){
-  if(history.state?.appScreen==='detail')history.back();
-  else performDetailReturn();
-}
-function updateStickyDetailBack(){
-  const show=activeScreenId()==='detail'&&window.scrollY>170;
-  $('#detailStickyBack')?.classList.toggle('show',show);
-}
+const setCurrentFilters=value=>{if(currentFilterContext==='catalog')catalogFilters=value;else libraryFilters=value;filters=value;};
+function openLibraryTab(tab){activeTab=tab;$$('.library-tab').forEach(button=>{button.classList.toggle('active',button.dataset.tab===tab);});go('library');}
+function activeScreenId(){return $('.screen.active')?.id||'home';}
+function go(id,{scrollTop=0,behavior='smooth'}={}){$$('.screen').forEach(s=>s.classList.remove('active'));$('#'+id).classList.add('active');const navScreen=id==='detail'?(detailOrigin?.screen||'library'):id;$$('.nav button[data-screen]').forEach(b=>b.classList.toggle('active',b.dataset.screen===navScreen));if(id==='library')renderLibrary();if(id==='catalog'){renderCatalog();loadCatalogStarter();}requestAnimationFrame(()=>window.scrollTo({top:scrollTop,behavior}));updateStickyDetailBack();}
+function detailReturnLabel(screen){if(screen==='catalog')return 'Вернуться в каталог';if(screen==='library')return 'Вернуться в «Мои фильмы»';if(screen==='settings')return 'Вернуться в настройки';return 'Вернуться на главную';}
+function captureDetailOrigin(){const screen=activeScreenId();if(screen==='detail')return;detailOrigin={screen:['home','library','catalog','settings'].includes(screen)?screen:'home',scrollY:window.scrollY,catalogQuery:$('#catalogSearchInput')?.value||'',libraryQuery:$('#searchInput')?.value||''};}
+function performDetailReturn(){const origin=detailOrigin||{screen:'library',scrollY:0};restoringDetailOrigin=true;if(origin.catalogQuery!=null&&$('#catalogSearchInput'))$('#catalogSearchInput').value=origin.catalogQuery;if(origin.libraryQuery!=null&&$('#searchInput'))$('#searchInput').value=origin.libraryQuery;go(origin.screen,{scrollTop:origin.scrollY||0,behavior:'auto'});restoringDetailOrigin=false;}
+function returnFromDetail(){if(history.state?.appScreen==='detail')history.back();else performDetailReturn();}
+function updateStickyDetailBack(){const show=activeScreenId()==='detail'&&window.scrollY>170;$('#detailStickyBack')?.classList.toggle('show',show);}
 function openOverlay(id){$('#'+id).classList.add('open')}
 function closeOverlay(id){$('#'+id).classList.remove('open')}
-function showToast(text,actionLabel=null,action=null){
-  const t=$('#toast'),textEl=$('#toastText'),actionBtn=$('#toastAction');
-  textEl.textContent=text;
-  actionBtn.hidden=!actionLabel;
-  actionBtn.textContent=actionLabel||'';
-  actionBtn.onclick=()=>{
-    if(action)action();
-    hideToast();
-  };
-  t.style.display='flex';
-  requestAnimationFrame(()=>t.classList.add('show'));
-  clearTimeout(window.toastTimer);
-  window.toastTimer=setTimeout(hideToast,2600);
-}
-function hideToast(){
-  const t=$('#toast');
-  t.classList.remove('show');
-  setTimeout(()=>t.style.display='none',200);
-}
-function visibleMovies(f=libraryFilters){
-  const q=$('#searchInput').value.trim().toLowerCase();
-  return movies.filter(m=>{
-    const st=states[m.id];
-    const genrePass=!f.genres.length||f.genres.some(g=>m.genres.includes(g));
-    const yearPass=(!f.yearFrom||m.year>=f.yearFrom)&&(!f.yearTo||m.year<=f.yearTo);
-    const typePass=!f.types.length||f.types.includes(m.type);
-    const tabPass=activeTab==='tonight'?st.status==='watchlist'&&st.forTonight:st.status===activeTab;
-    return tabPass&&(!q||m.title.toLowerCase().includes(q))&&typePass&&genrePass&&(m.kp==null||m.kp>=f.rating)&&yearPass;
-  });
-}
-function visibleCatalogMovies(f=catalogFilters){
-  return catalogResults.filter(m=>{
-    const genrePass=!f.genres.length||f.genres.some(g=>m.genres.includes(g));
-    const yearPass=(!f.yearFrom||m.year>=f.yearFrom)&&(!f.yearTo||m.year<=f.yearTo);
-    const typePass=!f.types.length||f.types.includes(m.type);
-    return typePass&&genrePass&&(m.kp==null||m.kp>=f.rating)&&yearPass;
-  });
-}
-function catalogMovieFromApi(item){
-  return normalizeImportedMovie({...item,enrichedAt:item.enrichedAt||new Date().toISOString()});
-}
-function ensureCatalogMovieLocal(movie){
-  let local=movies.find(item=>item.id===movie.id||String(item.kinopoiskId||'')===String(movie.kinopoiskId||''));
-  if(local)return local;
-  local={...movie,imported:true};
-  movies.push(local);
-  states[local.id]={status:'none',forTonight:false,userRating:null,watchedDate:null};
-  genres=[...new Set(movies.flatMap(item=>item.genres))].sort();
-  persistImportedMovies();
-  persistStates();
-  return local;
-}
-async function fetchCatalogItems(params){
-  const query=new URLSearchParams(params);
-  const response=await fetch('/api/catalog-search?'+query.toString(),{cache:'no-store'});
-  const data=await response.json().catch(()=>({}));
-  if(!response.ok)throw new Error(data.error||'Не удалось загрузить каталог.');
-  return (Array.isArray(data.items)?data.items:[]).map(catalogMovieFromApi);
-}
-async function loadCatalogStarter(){
-  if(catalogStarterItems.length||catalogStarterLoading)return;
-  catalogStarterLoading=true;
-  renderCatalog();
-  try{
-    catalogStarterItems=await fetchCatalogItems({preset:'starter',limit:'8'});
-  }catch(error){
-    showToast(error.message||'Не удалось загрузить подборку');
-  }finally{
-    catalogStarterLoading=false;
-    renderCatalog();
-  }
-}
-async function applyCatalogPreset(preset){
-  activeCatalogPreset=preset;
-  $('#catalogSearchInput').value='';
-  $('#clearCatalogSearch').classList.remove('show');
-  catalogLoading=true;
-  renderCatalog();
-  try{
-    catalogResults=await fetchCatalogItems({preset,limit:'30'});
-  }catch(error){
-    catalogResults=[];
-    showToast(error.message||'Не удалось применить быстрый выбор');
-  }finally{
-    catalogLoading=false;
-    renderCatalog();
-  }
-}
-async function searchSharedCatalog(){
-  const q=$('#catalogSearchInput').value.trim();
-  $('#clearCatalogSearch').classList.toggle('show',q.length>0);
-  activeCatalogPreset=null;
-  if(q.length<2){
-    catalogResults=[];
-    catalogLoading=false;
-    renderCatalog();
-    loadCatalogStarter();
-    return;
-  }
-  catalogLoading=true;
-  renderCatalog();
-  try{
-    catalogResults=await fetchCatalogItems({q,limit:'30'});
-  }catch(error){
-    catalogResults=[];
-    showToast(error.message||'Ошибка поиска по каталогу');
-  }finally{
-    catalogLoading=false;
-    renderCatalog();
-  }
-}
-function renderLibrary(){
-  const list=visibleMovies(libraryFilters);
-  $('#movieList').innerHTML=list.map(m=>{
-    const st=states[m.id];
-    const status=[
-      st.status==='watchlist'&&st.forTonight?'<span class="badge ok">🌙 На вечер</span>':'',
-      st.status==='watched'?'<span class="badge ok">✓ Просмотрено</span>':'',
-      st.userRating!=null?'<span class="badge" data-edit-rating="'+m.id+'">Моя '+st.userRating+'/10</span>':''
-    ].join('');
-    const canBookmark=['none','watchlist'].includes(st.status);
-    const saved=st.status==='watchlist';
-    return `<article class="card movie-card" data-open="${m.id}">
-      <button class="bookmark-btn ${saved?'saved':''}" data-bookmark="${m.id}" ${canBookmark?'':'hidden'} aria-label="${saved?'Удалить из «Хочу посмотреть»':'Добавить в «Хочу посмотреть»'}">${bookmarkIcon(saved)}</button>
-      ${posterMarkup(m)}
-      <div>
-        <h3>${m.title}</h3>
-        <div class="meta">
-          <span class="badge kp" data-external="${m.kpUrl}">КП ${ratingText(m.kp)}</span>
-          ${m.imdbUrl?`<span class="badge imdb" data-external="${m.imdbUrl}">IMDb ${ratingText(m.imdb)}</span>`:''}
-        </div>
-        <div class="meta"><span>${yearText(m.year)}</span><span>${typeLabel(m.type)}</span><span>${m.time}</span></div>
-        <div class="genre-line">${m.genres.slice(0,2).join(' · ')}</div>
-        <p class="list-description">${m.desc}</p>
-        <div class="status-row">${status}</div>
-      </div>
-    </article>`;
-  }).join('')||'<div class="card empty">По выбранным условиям ничего не найдено.</div>';
-
-  const n=list.length;
-  $('#resultCount').textContent='Найдено '+n+' '+(n===1?'фильм':n>=2&&n<=4?'фильма':'фильмов');
-  $('#watchlistCount').textContent=movies.filter(m=>states[m.id].status==='watchlist').length;
-  $('#tonightCount').textContent=movies.filter(m=>states[m.id].status==='watchlist'&&states[m.id].forTonight).length;
-  $('#watchedCount').textContent=movies.filter(m=>states[m.id].status==='watched').length;
-  renderLibraryActiveFilters();
-
-  $$('[data-open]').forEach(el=>el.addEventListener('click',()=>openMovie(el.dataset.open)));
-  $$('[data-bookmark]').forEach(el=>el.addEventListener('click',e=>{e.stopPropagation();toggleWatchlist(el.dataset.bookmark)}));
-  $$('[data-external]').forEach(el=>el.addEventListener('click',e=>{e.stopPropagation();window.open(el.dataset.external,'_blank')}));
-  $$('[data-edit-rating]').forEach(el=>el.addEventListener('click',e=>{e.stopPropagation();openRating(el.dataset.editRating)}));
-}
-function filterItems(f,defaultRating=6){
-  const items=[];
-  if(f.types.length)items.push(['types',f.types.map(typeLabel).join(', ')]);
-  if(f.genres.length)items.push(['genres',f.genres.length===1?f.genres[0]:f.genres[0]+' +'+(f.genres.length-1)]);
-  if(f.rating!==defaultRating&&f.rating>0)items.push(['rating','КП '+f.rating.toFixed(1)+'+']);
-  if(f.yearFrom||f.yearTo)items.push(['year',f.yearLabel]);
-  return items;
-}
-function clearFilter(f,key,defaultRating=6){
-  const next=structuredClone(f);
-  if(key==='types')next.types=[];
-  if(key==='genres')next.genres=[];
-  if(key==='rating')next.rating=defaultRating;
-  if(key==='year'){next.yearFrom=null;next.yearTo=null;next.yearLabel='Любой'}
-  return next;
-}
-function renderLibraryActiveFilters(){
-  const items=filterItems(libraryFilters,0);
-  $('#activeFilters').innerHTML=items.map(([k,v])=>`<span class="filter-pill">${v}<button data-remove-library="${k}">×</button></span>`).join('');
-  $('#filterCount').textContent=items.length?'('+items.length+')':'';
-  $$('[data-remove-library]').forEach(b=>b.addEventListener('click',()=>{
-    libraryFilters=clearFilter(libraryFilters,b.dataset.removeLibrary,0);
-    filters=libraryFilters;
-    renderLibrary();
-  }));
-}
-function renderCatalogActiveFilters(){
-  const items=filterItems(catalogFilters,6);
-  $('#catalogActiveFilters').innerHTML=items.map(([k,v])=>`<span class="filter-pill">${v}<button data-remove-catalog="${k}">×</button></span>`).join('');
-  $('#catalogFilterCount').textContent=items.length?'('+items.length+')':'';
-  $$('[data-remove-catalog]').forEach(b=>b.addEventListener('click',()=>{
-    catalogFilters=clearFilter(catalogFilters,b.dataset.removeCatalog,6);
-    filters=catalogFilters;
-    renderCatalog();
-  }));
-}
-function catalogSavedState(m){
-  const local=movies.find(item=>item.id===m.id||String(item.kinopoiskId||'')===String(m.kinopoiskId||''));
-  const st=local?states[local.id]:{status:'none',forTonight:false};
-  return {local,st,saved:st.status==='watchlist'};
-}
-function bindCatalogCardActions(scope=document){
-  scope.querySelectorAll('[data-catalog-open]').forEach(el=>el.addEventListener('click',()=>{
-    const all=[...catalogResults,...catalogStarterItems];
-    const movie=all.find(item=>item.id===el.dataset.catalogOpen);
-    if(movie)openMovie(ensureCatalogMovieLocal(movie).id);
-  }));
-  scope.querySelectorAll('[data-catalog-bookmark]').forEach(el=>el.addEventListener('click',e=>{
-    e.stopPropagation();
-    const all=[...catalogResults,...catalogStarterItems];
-    const movie=all.find(item=>item.id===el.dataset.catalogBookmark);
-    if(movie)toggleWatchlist(ensureCatalogMovieLocal(movie).id);
-  }));
-  scope.querySelectorAll('[data-catalog-external]').forEach(el=>el.addEventListener('click',e=>{
-    e.stopPropagation();
-    if(el.dataset.catalogExternal)window.open(el.dataset.catalogExternal,'_blank');
-  }));
-}
-function renderCatalogStarter(){
-  const box=$('#catalogStarterList');
-  if(catalogStarterLoading&&!catalogStarterItems.length){
-    box.innerHTML='<div class="card empty" style="flex:0 0 100%">Подбираем несколько вариантов…</div>';
-    return;
-  }
-  box.innerHTML=catalogStarterItems.map(m=>{
-    const {saved}=catalogSavedState(m);
-    return `<article class="catalog-starter-card" data-catalog-open="${m.id}">
-      <button class="bookmark-btn ${saved?'saved':''}" data-catalog-bookmark="${m.id}" aria-label="${saved?'Удалить из «Хочу посмотреть»':'Добавить в «Хочу посмотреть»'}">${bookmarkIcon(saved)}</button>
-      ${posterMarkup(m)}
-      <h4>${escapeHtml(m.title)}</h4>
-      <div class="catalog-starter-meta">КП ${ratingText(m.kp)} · ${yearText(m.year)}</div>
-      <div class="genre-line">${m.genres.slice(0,2).map(escapeHtml).join(' · ')}</div>
-    </article>`;
-  }).join('')||'<div class="card empty" style="flex:0 0 100%">Подборка пока формируется.</div>';
-  bindCatalogCardActions(box);
-}
-function renderCatalog(){
-  const query=$('#catalogSearchInput').value.trim();
-  const hasIntent=query.length>=2||Boolean(activeCatalogPreset);
-  $('#catalogDiscovery').style.display=hasIntent?'none':'block';
-  $('#catalogResultsBlock').style.display=hasIntent?'block':'none';
-  $$('.catalog-quick-chip').forEach(chip=>chip.classList.toggle('active',chip.dataset.catalogPreset===activeCatalogPreset));
-  renderCatalogActiveFilters();
-
-  if(!hasIntent){
-    renderCatalogStarter();
-    return;
-  }
-
-  const list=visibleCatalogMovies(catalogFilters);
-  if(catalogLoading){
-    $('#catalogList').innerHTML='<div class="card empty">Подбираем фильмы…</div>';
-    $('#catalogResultCount').textContent=activeCatalogPreset?catalogPresetLabels[activeCatalogPreset]:'Поиск…';
-    return;
-  }
-  $('#catalogList').innerHTML=list.map(m=>{
-    const {st,saved}=catalogSavedState(m);
-    const status=st.status==='watched'?'<span class="badge ok">Просмотрено</span>':
-      saved&&st.forTonight?'<span class="badge ok">🌙 На вечер</span>':
-      saved?'<span class="badge">В моих фильмах</span>':'';
-    return `<article class="card catalog-card" data-catalog-open="${m.id}">
-      <button class="bookmark-btn ${saved?'saved':''}" data-catalog-bookmark="${m.id}" aria-label="${saved?'Удалить из «Хочу посмотреть»':'Добавить в «Хочу посмотреть»'}">${bookmarkIcon(saved)}</button>
-      ${posterMarkup(m)}
-      <div>
-        <h3>${escapeHtml(m.title)}</h3>
-        <div class="meta">
-          <span class="badge kp" data-catalog-external="${escapeHtml(m.kpUrl)}">КП ${ratingText(m.kp)}</span>
-          ${m.imdbUrl?`<span class="badge imdb" data-catalog-external="${escapeHtml(m.imdbUrl)}">IMDb ${ratingText(m.imdb)}</span>`:''}
-        </div>
-        <div class="meta"><span>${yearText(m.year)}</span><span>${typeLabel(m.type)}</span><span>${escapeHtml(m.time)}</span></div>
-        <div class="genre-line">${m.genres.slice(0,2).map(escapeHtml).join(' · ')}</div>
-        <p class="list-description">${escapeHtml(m.desc)}</p>
-        <div class="status-row">${status}</div>
-      </div>
-    </article>`;
-  }).join('')||'<div class="card empty">По выбранным условиям в общем каталоге пока ничего не найдено.</div>';
-  const n=list.length;
-  $('#catalogResultCount').textContent=activeCatalogPreset?`${catalogPresetLabels[activeCatalogPreset]} · ${n}`:'Найдено '+n+' '+(n===1?'фильм':n>=2&&n<=4?'фильма':'фильмов');
-  bindCatalogCardActions($('#catalogResultsBlock'));
-}
-function openMovie(id){
-  const wasDetail=activeScreenId()==='detail';
-  if(!wasDetail)captureDetailOrigin();
-  currentId=id;const m=movies.find(x=>x.id===id);
-  $('#detailTitle').textContent=m.title;
-  const detailPoster=$('#detailPoster');
-  detailPoster.classList.toggle('has-image',Boolean(m.posterUrl));
-  detailPoster.innerHTML=m.posterUrl?`<img src="${escapeHtml(m.posterUrl)}" alt="Постер: ${escapeHtml(m.title)}">`:escapeHtml(m.title.toUpperCase());
-  $('#detailBackdrop').style.background=m.backdropUrl?`linear-gradient(180deg,rgba(13,15,20,.08),rgba(13,15,20,.38)),url("${m.backdropUrl.replace(/"/g,'%22')}") center/cover`:`linear-gradient(145deg,hsl(${((m.year||2000)*17)%360} 24% 36%),#11151c)`;
-  $('#detailMeta').innerHTML=`<span>${typeLabel(m.type)}</span><span>${m.genres.join(' · ')}</span><span>${yearText(m.year)}</span><span>${m.time}</span>`;
-  $('#detailDesc').textContent=m.desc;
-  $('#kpLink').textContent='КП '+ratingText(m.kp);$('#kpLink').href=m.kpUrl;
-  $('#imdbLink').textContent='IMDb '+ratingText(m.imdb);$('#imdbLink').href=m.imdbUrl||'#';$('#imdbLink').style.display=m.imdbUrl?'inline-flex':'none';
-  $('#kpMoreLink').href=m.kpUrl;$('#imdbMoreLink').href=m.imdbUrl||'#';$('#imdbMoreLink').style.display=m.imdbUrl?'inline-flex':'none';$('#trailerLink').href=m.trailer;
-  $('#detailReturnBtn').textContent=detailReturnLabel(detailOrigin?.screen||'library');
-  renderDetail();renderSimilarMovies(m);go('detail');
-  if(!wasDetail)history.pushState({appScreen:'detail',movieId:id},'');
-}
-
-function renderDetail(){
-  const st=states[currentId];
-  $('#detailStatus').innerHTML=st.status==='watchlist'?
-    '<span class="badge">❤️ Хочу посмотреть</span>'+(st.forTonight?'<span class="badge ok">🌙 На вечер</span>':''):
-    st.status==='watched'?'<span class="badge ok">✓ Просмотрено</span>'+(st.watchedDate?'<span class="badge">'+st.watchedDate+'</span>':''):
-    '<span class="badge">Не добавлен в «Мои фильмы»</span>';
-  $('#tonightBtn').style.display=st.status==='watchlist'&&!st.forTonight?'block':'none';
-  $('#cancelTonightBtn').style.display=st.status==='watchlist'&&st.forTonight?'block':'none';
-  $('#markWatchedBtn').style.display=st.status==='watchlist'&&st.forTonight?'block':'none';
-  const bookmark=$('#detailBookmarkBtn');
-  const canBookmark=['none','watchlist'].includes(st.status);
-  bookmark.hidden=!canBookmark;
-  bookmark.classList.toggle('saved',st.status==='watchlist');
-  bookmark.innerHTML=bookmarkIcon(st.status==='watchlist');
-  bookmark.setAttribute('aria-label',st.status==='watchlist'?'Удалить из «Хочу посмотреть»':'Добавить в «Хочу посмотреть»');
-  if(st.userRating!=null){
-    $('#personalStars').innerHTML=Array.from({length:10},(_,i)=>`<span class="${i<st.userRating?'on':'off'}">★</span>`).join('');
-    $('#personalRatingValue').textContent=st.userRating+' из 10';
-    $('#personalRating').style.display='block';
-  }else $('#personalRating').style.display='none';
-}
-function renderSimilarMovies(movie){
-  const similar=movies
-    .filter(m=>m.id!==movie.id)
-    .map(m=>({movie:m,score:(m.type===movie.type?2:0)+m.genres.filter(g=>movie.genres.includes(g)).length*3}))
-    .filter(x=>x.score>0)
-    .sort((a,b)=>b.score-a.score||(b.movie.kp||0)-(a.movie.kp||0))
-    .slice(0,6)
-    .map(x=>x.movie);
-  $('#similarList').innerHTML=similar.map(m=>{
-    const saved=states[m.id].status==='watchlist';
-    return `<article class="similar-card" data-similar-open="${m.id}">
-      <button class="bookmark-btn ${saved?'saved':''}" data-similar-bookmark="${m.id}" aria-label="${saved?'Удалить из «Хочу посмотреть»':'Добавить в «Хочу посмотреть»'}">${bookmarkIcon(saved)}</button>
-      ${posterMarkup(m)}
-      <h4>${m.title}</h4>
-      <div class="similar-meta">КП ${ratingText(m.kp)} · ${yearText(m.year)}</div>
-      <div class="genre-line">${m.genres.slice(0,2).join(' · ')}</div>
-    </article>`;
-  }).join('');
-  $$('[data-similar-open]').forEach(el=>el.addEventListener('click',()=>openMovie(el.dataset.similarOpen)));
-  $$('[data-similar-bookmark]').forEach(el=>el.addEventListener('click',e=>{
-    e.stopPropagation();
-    toggleWatchlist(el.dataset.similarBookmark);
-  }));
-}
-function openRating(id=currentId){
-  currentId=id;selectedRating=states[id].userRating;
-  $('#rateTitle').textContent=movies.find(m=>m.id===id).title;
-  renderRating();go('rate');
-}
-function renderRating(){
-  $$('#ratingGrid button').forEach((b,i)=>b.classList.toggle('active',i+1===selectedRating));
-  if(selectedRating==null){$('#ratingPreview').style.display='none';return}
-  $('#ratingStars').innerHTML=Array.from({length:10},(_,i)=>`<span class="${i<selectedRating?'on':'off'}">★</span>`).join('');
-  $('#ratingValue').textContent=selectedRating+' из 10';$('#ratingPreview').style.display='block';
-}
-function updateFilterSummary(){
-  $('#genreValue').textContent=draft.genres.length?(draft.genres.length===1?draft.genres[0]:draft.genres[0]+' +'+(draft.genres.length-1))+' ›':'Не выбраны ›';
-  $('#ratingFilterValue').textContent=draft.rating>0?'От '+draft.rating.toFixed(1)+' ›':'Любой ›';
-  $('#yearFilterValue').textContent=draft.yearLabel+' ›';
-  $$('#typeOptions .choice').forEach(b=>{
-    const v=b.dataset.value;
-    b.classList.toggle('active',v==='all'?!draft.types.length:draft.types.includes(v));
-  });
-  $('#previewCount').textContent=currentFilterContext==='catalog'?visibleCatalogMovies(draft).length:visibleMovies(draft).length;
-}
-function renderGenreList(){
-  const q=$('#genreSearch').value.trim().toLowerCase();
-  $('#genreList').innerHTML=genres.filter(g=>g.toLowerCase().includes(q)).map(g=>`<button class="list-option ${draftGenres.includes(g)?'active':''}" data-genre="${g}"><span>${g}</span><span class="check">${draftGenres.includes(g)?'✓':''}</span></button>`).join('');
-  $$('[data-genre]').forEach(b=>b.addEventListener('click',()=>{const g=b.dataset.genre;draftGenres=draftGenres.includes(g)?draftGenres.filter(x=>x!==g):[...draftGenres,g];renderGenreList()}));
-}
-function renderRatingFilter(){
-  const vals=[0,5,5.5,6,6.5,7,7.5,8,8.5,9,9.5,10];
-  $('#ratingFilterList').innerHTML=vals.map(v=>`<button class="list-option ${draft.rating===v?'active':''}" data-kp-rating="${v}"><span>${v===0?'Любой':'От '+v.toFixed(1)}</span><span class="check">${draft.rating===v?'✓':''}</span></button>`).join('');
-  $$('[data-kp-rating]').forEach(b=>b.addEventListener('click',()=>{draft.rating=Number(b.dataset.kpRating);closeOverlay('ratingOverlay');updateFilterSummary()}));
-}
-function setYearPreset(label,from,to){
-  draft.yearFrom=from;draft.yearTo=to;draft.yearLabel=label;$('#yearFrom').value=from||'';$('#yearTo').value=to||'';closeOverlay('yearOverlay');updateFilterSummary();
-}
-function renderYearPresets(){
-  const y=new Date().getFullYear();
-  const presets=[['Любой',null,null],['Последние 3 года',y-2,y],['Последние 5 лет',y-4,y],['После 2020',2020,null],['После 2010',2010,null]];
-  $('#yearPresets').innerHTML=presets.map(([label,from,to])=>`<button class="choice ${draft.yearLabel===label?'active':''}" data-year-label="${label}" data-year-from="${from??''}" data-year-to="${to??''}">${label}</button>`).join('');
-  $$('[data-year-label]').forEach(b=>b.addEventListener('click',()=>setYearPreset(b.dataset.yearLabel,b.dataset.yearFrom?Number(b.dataset.yearFrom):null,b.dataset.yearTo?Number(b.dataset.yearTo):null)));
-}
-
+function showToast(text,actionLabel=null,action=null){const t=$('#toast'),textEl=$('#toastText'),actionBtn=$('#toastAction');textEl.textContent=text;actionBtn.hidden=!actionLabel;actionBtn.textContent=actionLabel||'';actionBtn.onclick=()=>{if(action)action();hideToast();};t.style.display='flex';requestAnimationFrame(()=>t.classList.add('show'));clearTimeout(window.toastTimer);window.toastTimer=setTimeout(hideToast,2600);}
+function hideToast(){const t=$('#toast');t.classList.remove('show');setTimeout(()=>t.style.display='none',200);}
+function visibleMovies(f=libraryFilters){const q=$('#searchInput').value.trim().toLowerCase();return movies.filter(m=>{const st=states[m.id];const genrePass=!f.genres.length||f.genres.some(g=>m.genres.includes(g));const yearPass=(!f.yearFrom||m.year>=f.yearFrom)&&(!f.yearTo||m.year<=f.yearTo);const typePass=!f.types.length||f.types.includes(m.type);const tabPass=activeTab==='tonight'?st.status==='watchlist'&&st.forTonight:st.status===activeTab;return tabPass&&(!q||m.title.toLowerCase().includes(q))&&typePass&&genrePass&&(m.kp==null||m.kp>=f.rating)&&yearPass;});}
+function visibleCatalogMovies(f=catalogFilters){return catalogResults.filter(m=>{const genrePass=!f.genres.length||f.genres.some(g=>m.genres.includes(g));const yearPass=(!f.yearFrom||m.year>=f.yearFrom)&&(!f.yearTo||m.year<=f.yearTo);const typePass=!f.types.length||f.types.includes(m.type);return typePass&&genrePass&&(m.kp==null||m.kp>=f.rating)&&yearPass;});}
+function catalogMovieFromApi(item){return normalizeImportedMovie({...item,enrichedAt:item.enrichedAt||new Date().toISOString()});}
+function ensureCatalogMovieLocal(movie){let local=movies.find(item=>item.id===movie.id||String(item.kinopoiskId||'')===String(movie.kinopoiskId||''));if(local)return local;local={...movie,imported:true};movies.push(local);states[local.id]={status:'none',forTonight:false,userRating:null,watchedDate:null};genres=[...new Set(movies.flatMap(item=>item.genres))].sort();persistImportedMovies();persistStates();return local;}
+async function fetchCatalogItems(params){const query=new URLSearchParams(params);const response=await fetch('/api/catalog-search?'+query.toString(),{cache:'no-store'});const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.error||'Не удалось загрузить каталог.');return (Array.isArray(data.items)?data.items:[]).map(catalogMovieFromApi);}
+async function loadCatalogStarter(){if(catalogStarterItems.length||catalogStarterLoading)return;catalogStarterLoading=true;renderCatalog();try{catalogStarterItems=await fetchCatalogItems({preset:'starter',limit:'8'});}catch(error){showToast(error.message||'Не удалось загрузить подборку');}finally{catalogStarterLoading=false;renderCatalog();}}
+async function applyCatalogPreset(preset){activeCatalogPreset=preset;$('#catalogSearchInput').value='';$('#clearCatalogSearch').classList.remove('show');catalogLoading=true;renderCatalog();try{catalogResults=await fetchCatalogItems({preset,limit:'30'});}catch(error){catalogResults=[];showToast(error.message||'Не удалось применить быстрый выбор');}finally{catalogLoading=false;renderCatalog();}}
+async function searchSharedCatalog(){const q=$('#catalogSearchInput').value.trim();$('#clearCatalogSearch').classList.toggle('show',q.length>0);activeCatalogPreset=null;if(q.length<2){catalogResults=[];catalogLoading=false;renderCatalog();loadCatalogStarter();return;}catalogLoading=true;renderCatalog();try{catalogResults=await fetchCatalogItems({q,limit:'30'});}catch(error){catalogResults=[];showToast(error.message||'Ошибка поиска по каталогу');}finally{catalogLoading=false;renderCatalog();}}
+function renderLibrary(){const list=visibleMovies(libraryFilters);$('#movieList').innerHTML=list.map(m=>{const st=states[m.id];const status=[st.status==='watchlist'&&st.forTonight?'<span class="badge ok">🌙 На вечер</span>':'',st.status==='watched'?'<span class="badge ok">✓ Просмотрено</span>':'',st.userRating!=null?'<span class="badge" data-edit-rating="'+m.id+'">Моя '+st.userRating+'/10</span>':''].join('');const canBookmark=['none','watchlist'].includes(st.status);const saved=st.status==='watchlist';return `<article class="card movie-card" data-open="${m.id}"><button class="bookmark-btn ${saved?'saved':''}" data-bookmark="${m.id}" ${canBookmark?'':'hidden'} aria-label="${saved?'Удалить из «Хочу посмотреть»':'Добавить в «Хочу посмотреть»'}">${bookmarkIcon(saved)}</button>${posterMarkup(m)}<div><h3>${m.title}</h3><div class="meta"><span class="badge kp" data-external="${m.kpUrl}">КП ${ratingText(m.kp)}</span>${m.imdbUrl?`<span class="badge imdb" data-external="${m.imdbUrl}">IMDb ${ratingText(m.imdb)}</span>`:''}</div><div class="meta"><span>${yearText(m.year)}</span><span>${typeLabel(m.type)}</span><span>${m.time}</span></div><div class="genre-line">${m.genres.slice(0,2).join(' · ')}</div><p class="list-description">${m.desc}</p><div class="status-row">${status}</div></div></article>`;}).join('')||'<div class="card empty">По выбранным условиям ничего не найдено.</div>';const n=list.length;$('#resultCount').textContent='Найдено '+n+' '+(n===1?'фильм':n>=2&&n<=4?'фильма':'фильмов');$('#watchlistCount').textContent=movies.filter(m=>states[m.id].status==='watchlist').length;$('#tonightCount').textContent=movies.filter(m=>states[m.id].status==='watchlist'&&states[m.id].forTonight).length;$('#watchedCount').textContent=movies.filter(m=>states[m.id].status==='watched').length;renderLibraryActiveFilters();$$('[data-open]').forEach(el=>el.addEventListener('click',()=>openMovie(el.dataset.open)));$$('[data-bookmark]').forEach(el=>el.addEventListener('click',e=>{e.stopPropagation();toggleWatchlist(el.dataset.bookmark)}));$$('[data-external]').forEach(el=>el.addEventListener('click',e=>{e.stopPropagation();window.open(el.dataset.external,'_blank')}));$$('[data-edit-rating]').forEach(el=>el.addEventListener('click',e=>{e.stopPropagation();openRating(el.dataset.editRating)}));}
+function filterItems(f,defaultRating=6){const items=[];if(f.types.length)items.push(['types',f.types.map(typeLabel).join(', ')]);if(f.genres.length)items.push(['genres',f.genres.length===1?f.genres[0]:f.genres[0]+' +'+(f.genres.length-1)]);if(f.rating!==defaultRating&&f.rating>0)items.push(['rating','КП '+f.rating.toFixed(1)+'+']);if(f.yearFrom||f.yearTo)items.push(['year',f.yearLabel]);return items;}
+function clearFilter(f,key,defaultRating=6){const next=structuredClone(f);if(key==='types')next.types=[];if(key==='genres')next.genres=[];if(key==='rating')next.rating=defaultRating;if(key==='year'){next.yearFrom=null;next.yearTo=null;next.yearLabel='Любой'}return next;}
+function renderLibraryActiveFilters(){const items=filterItems(libraryFilters,0);$('#activeFilters').innerHTML=items.map(([k,v])=>`<span class="filter-pill">${v}<button data-remove-library="${k}">×</button></span>`).join('');$('#filterCount').textContent=items.length?'('+items.length+')':'';$$('[data-remove-library]').forEach(b=>b.addEventListener('click',()=>{libraryFilters=clearFilter(libraryFilters,b.dataset.removeLibrary,0);filters=libraryFilters;renderLibrary();}));}
+function renderCatalogActiveFilters(){const items=filterItems(catalogFilters,6);$('#catalogActiveFilters').innerHTML=items.map(([k,v])=>`<span class="filter-pill">${v}<button data-remove-catalog="${k}">×</button></span>`).join('');$('#catalogFilterCount').textContent=items.length?'('+items.length+')':'';$$('[data-remove-catalog]').forEach(b=>b.addEventListener('click',()=>{catalogFilters=clearFilter(catalogFilters,b.dataset.removeCatalog,6);filters=catalogFilters;renderCatalog();}));}
+function catalogSavedState(m){const local=movies.find(item=>item.id===m.id||String(item.kinopoiskId||'')===String(m.kinopoiskId||''));const st=local?states[local.id]:{status:'none',forTonight:false};return {local,st,saved:st.status==='watchlist'};}
+function bindCatalogCardActions(scope=document){scope.querySelectorAll('[data-catalog-open]').forEach(el=>el.addEventListener('click',()=>{const all=[...catalogResults,...catalogStarterItems];const movie=all.find(item=>item.id===el.dataset.catalogOpen);if(movie)openMovie(ensureCatalogMovieLocal(movie).id);}));scope.querySelectorAll('[data-catalog-bookmark]').forEach(el=>el.addEventListener('click',e=>{e.stopPropagation();const all=[...catalogResults,...catalogStarterItems];const movie=all.find(item=>item.id===el.dataset.catalogBookmark);if(movie)toggleWatchlist(ensureCatalogMovieLocal(movie).id);}));scope.querySelectorAll('[data-catalog-external]').forEach(el=>el.addEventListener('click',e=>{e.stopPropagation();if(el.dataset.catalogExternal)window.open(el.dataset.catalogExternal,'_blank');}));}
+function renderCatalogStarter(){const box=$('#catalogStarterList');if(catalogStarterLoading&&!catalogStarterItems.length){box.innerHTML='<div class="card empty" style="flex:0 0 100%">Подбираем несколько вариантов…</div>';return;}box.innerHTML=catalogStarterItems.map(m=>{const {saved}=catalogSavedState(m);return `<article class="catalog-starter-card" data-catalog-open="${m.id}"><button class="bookmark-btn ${saved?'saved':''}" data-catalog-bookmark="${m.id}" aria-label="${saved?'Удалить из «Хочу посмотреть»':'Добавить в «Хочу посмотреть»'}">${bookmarkIcon(saved)}</button>${posterMarkup(m)}<h4>${escapeHtml(m.title)}</h4><div class="catalog-starter-meta">КП ${ratingText(m.kp)} · ${yearText(m.year)}</div><div class="genre-line">${m.genres.slice(0,2).map(escapeHtml).join(' · ')}</div></article>`;}).join('')||'<div class="card empty" style="flex:0 0 100%">Подборка пока формируется.</div>';bindCatalogCardActions(box);}
+function renderCatalog(){const query=$('#catalogSearchInput').value.trim();const hasIntent=query.length>=2||Boolean(activeCatalogPreset);$('#catalogDiscovery').style.display=hasIntent?'none':'block';$('#catalogResultsBlock').style.display=hasIntent?'block':'none';$$('.catalog-quick-chip').forEach(chip=>chip.classList.toggle('active',chip.dataset.catalogPreset===activeCatalogPreset));renderCatalogActiveFilters();if(!hasIntent){renderCatalogStarter();return;}const list=visibleCatalogMovies(catalogFilters);if(catalogLoading){$('#catalogList').innerHTML='<div class="card empty">Подбираем фильмы…</div>';$('#catalogResultCount').textContent=activeCatalogPreset?catalogPresetLabels[activeCatalogPreset]:'Поиск…';return;}$('#catalogList').innerHTML=list.map(m=>{const {st,saved}=catalogSavedState(m);const status=st.status==='watched'?'<span class="badge ok">Просмотрено</span>':saved&&st.forTonight?'<span class="badge ok">🌙 На вечер</span>':saved?'<span class="badge">В моих фильмах</span>':'';return `<article class="card catalog-card" data-catalog-open="${m.id}"><button class="bookmark-btn ${saved?'saved':''}" data-catalog-bookmark="${m.id}" aria-label="${saved?'Удалить из «Хочу посмотреть»':'Добавить в «Хочу посмотреть»'}">${bookmarkIcon(saved)}</button>${posterMarkup(m)}<div><h3>${escapeHtml(m.title)}</h3><div class="meta"><span class="badge kp" data-catalog-external="${escapeHtml(m.kpUrl)}">КП ${ratingText(m.kp)}</span>${m.imdbUrl?`<span class="badge imdb" data-catalog-external="${escapeHtml(m.imdbUrl)}">IMDb ${ratingText(m.imdb)}</span>`:''}</div><div class="meta"><span>${yearText(m.year)}</span><span>${typeLabel(m.type)}</span><span>${escapeHtml(m.time)}</span></div><div class="genre-line">${m.genres.slice(0,2).map(escapeHtml).join(' · ')}</div><p class="list-description">${escapeHtml(m.desc)}</p><div class="status-row">${status}</div></div></article>`;}).join('')||'<div class="card empty">По выбранным условиям в общем каталоге пока ничего не найдено.</div>';const n=list.length;$('#catalogResultCount').textContent=activeCatalogPreset?`${catalogPresetLabels[activeCatalogPreset]} · ${n}`:'Найдено '+n+' '+(n===1?'фильм':n>=2&&n<=4?'фильма':'фильмов');bindCatalogCardActions($('#catalogResultsBlock'));}
+function openMovie(id){const wasDetail=activeScreenId()==='detail';if(!wasDetail)captureDetailOrigin();currentId=id;const m=movies.find(x=>x.id===id);$('#detailTitle').textContent=m.title;const detailPoster=$('#detailPoster');detailPoster.classList.toggle('has-image',Boolean(m.posterUrl));detailPoster.innerHTML=m.posterUrl?`<img src="${escapeHtml(m.posterUrl)}" alt="Постер: ${escapeHtml(m.title)}">`:escapeHtml(m.title.toUpperCase());$('#detailBackdrop').style.background=m.backdropUrl?`linear-gradient(180deg,rgba(13,15,20,.08),rgba(13,15,20,.38)),url("${m.backdropUrl.replace(/"/g,'%22')}") center/cover`:`linear-gradient(145deg,hsl(${((m.year||2000)*17)%360} 24% 36%),#11151c)`;$('#detailMeta').innerHTML=`<span>${typeLabel(m.type)}</span><span>${m.genres.join(' · ')}</span><span>${yearText(m.year)}</span><span>${m.time}</span>`;$('#detailDesc').textContent=m.desc;$('#kpLink').textContent='КП '+ratingText(m.kp);$('#kpLink').href=m.kpUrl;$('#imdbLink').textContent='IMDb '+ratingText(m.imdb);$('#imdbLink').href=m.imdbUrl||'#';$('#imdbLink').style.display=m.imdbUrl?'inline-flex':'none';$('#kpMoreLink').href=m.kpUrl;$('#imdbMoreLink').href=m.imdbUrl||'#';$('#imdbMoreLink').style.display=m.imdbUrl?'inline-flex':'none';$('#trailerLink').href=m.trailer;$('#detailReturnBtn').textContent=detailReturnLabel(detailOrigin?.screen||'library');renderDetail();renderSimilarMovies(m);go('detail');if(!wasDetail)history.pushState({appScreen:'detail',movieId:id},'');}
+function renderDetail(){const st=states[currentId];$('#detailStatus').innerHTML=st.status==='watchlist'?'<span class="badge">❤️ Хочу посмотреть</span>'+(st.forTonight?'<span class="badge ok">🌙 На вечер</span>':''):st.status==='watched'?'<span class="badge ok">✓ Просмотрено</span>'+(st.watchedDate?'<span class="badge">'+st.watchedDate+'</span>':''):'<span class="badge">Не добавлен в «Мои фильмы»</span>';$('#tonightBtn').style.display=st.status==='watchlist'&&!st.forTonight?'block':'none';$('#cancelTonightBtn').style.display=st.status==='watchlist'&&st.forTonight?'block':'none';$('#markWatchedBtn').style.display=st.status==='watchlist'&&st.forTonight?'block':'none';const bookmark=$('#detailBookmarkBtn');const canBookmark=['none','watchlist'].includes(st.status);bookmark.hidden=!canBookmark;bookmark.classList.toggle('saved',st.status==='watchlist');bookmark.innerHTML=bookmarkIcon(st.status==='watchlist');bookmark.setAttribute('aria-label',st.status==='watchlist'?'Удалить из «Хочу посмотреть»':'Добавить в «Хочу посмотреть»');if(st.userRating!=null){$('#personalStars').innerHTML=Array.from({length:10},(_,i)=>`<span class="${i<st.userRating?'on':'off'}">★</span>`).join('');$('#personalRatingValue').textContent=st.userRating+' из 10';$('#personalRating').style.display='block';}else $('#personalRating').style.display='none';}
+function renderSimilarMovies(movie){const similar=movies.filter(m=>m.id!==movie.id).map(m=>({movie:m,score:(m.type===movie.type?2:0)+m.genres.filter(g=>movie.genres.includes(g)).length*3})).filter(x=>x.score>0).sort((a,b)=>b.score-a.score||(b.movie.kp||0)-(a.movie.kp||0)).slice(0,6).map(x=>x.movie);$('#similarList').innerHTML=similar.map(m=>{const saved=states[m.id].status==='watchlist';return `<article class="similar-card" data-similar-open="${m.id}"><button class="bookmark-btn ${saved?'saved':''}" data-similar-bookmark="${m.id}" aria-label="${saved?'Удалить из «Хочу посмотреть»':'Добавить в «Хочу посмотреть»'}">${bookmarkIcon(saved)}</button>${posterMarkup(m)}<h4>${m.title}</h4><div class="similar-meta">КП ${ratingText(m.kp)} · ${yearText(m.year)}</div><div class="genre-line">${m.genres.slice(0,2).join(' · ')}</div></article>`;}).join('');$$('[data-similar-open]').forEach(el=>el.addEventListener('click',()=>openMovie(el.dataset.similarOpen)));$$('[data-similar-bookmark]').forEach(el=>el.addEventListener('click',e=>{e.stopPropagation();toggleWatchlist(el.dataset.similarBookmark);}));}
+function openRating(id=currentId){currentId=id;selectedRating=states[id].userRating;$('#rateTitle').textContent=movies.find(m=>m.id===id).title;renderRating();go('rate');}
+function renderRating(){$$('#ratingGrid button').forEach((b,i)=>b.classList.toggle('active',i+1===selectedRating));if(selectedRating==null){$('#ratingPreview').style.display='none';return}$('#ratingStars').innerHTML=Array.from({length:10},(_,i)=>`<span class="${i<selectedRating?'on':'off'}">★</span>`).join('');$('#ratingValue').textContent=selectedRating+' из 10';$('#ratingPreview').style.display='block';}
+function updateFilterSummary(){$('#genreValue').textContent=draft.genres.length?(draft.genres.length===1?draft.genres[0]:draft.genres[0]+' +'+(draft.genres.length-1))+' ›':'Не выбраны ›';$('#ratingFilterValue').textContent=draft.rating>0?'От '+draft.rating.toFixed(1)+' ›':'Любой ›';$('#yearFilterValue').textContent=draft.yearLabel+' ›';$$('#typeOptions .choice').forEach(b=>{const v=b.dataset.value;b.classList.toggle('active',v==='all'?!draft.types.length:draft.types.includes(v));});$('#previewCount').textContent=currentFilterContext==='catalog'?visibleCatalogMovies(draft).length:visibleMovies(draft).length;}
+function renderGenreList(){const q=$('#genreSearch').value.trim().toLowerCase();$('#genreList').innerHTML=genres.filter(g=>g.toLowerCase().includes(q)).map(g=>`<button class="list-option ${draftGenres.includes(g)?'active':''}" data-genre="${g}"><span>${g}</span><span class="check">${draftGenres.includes(g)?'✓':''}</span></button>`).join('');$$('[data-genre]').forEach(b=>b.addEventListener('click',()=>{const g=b.dataset.genre;draftGenres=draftGenres.includes(g)?draftGenres.filter(x=>x!==g):[...draftGenres,g];renderGenreList()}));}
+function renderRatingFilter(){const vals=[0,5,5.5,6,6.5,7,7.5,8,8.5,9,9.5,10];$('#ratingFilterList').innerHTML=vals.map(v=>`<button class="list-option ${draft.rating===v?'active':''}" data-kp-rating="${v}"><span>${v===0?'Любой':'От '+v.toFixed(1)}</span><span class="check">${draft.rating===v?'✓':''}</span></button>`).join('');$$('[data-kp-rating]').forEach(b=>b.addEventListener('click',()=>{draft.rating=Number(b.dataset.kpRating);closeOverlay('ratingOverlay');updateFilterSummary()}));}
+function setYearPreset(label,from,to){draft.yearFrom=from;draft.yearTo=to;draft.yearLabel=label;$('#yearFrom').value=from||'';$('#yearTo').value=to||'';closeOverlay('yearOverlay');updateFilterSummary();}
+function renderYearPresets(){const y=new Date().getFullYear();const presets=[['Любой',null,null],['Последние 3 года',y-2,y],['Последние 5 лет',y-4,y],['После 2020',2020,null],['После 2010',2010,null]];$('#yearPresets').innerHTML=presets.map(([label,from,to])=>`<button class="choice ${draft.yearLabel===label?'active':''}" data-year-label="${label}" data-year-from="${from??''}" data-year-to="${to??''}">${label}</button>`).join('');$$('[data-year-label]').forEach(b=>b.addEventListener('click',()=>setYearPreset(b.dataset.yearLabel,b.dataset.yearFrom?Number(b.dataset.yearFrom):null,b.dataset.yearTo?Number(b.dataset.yearTo):null)));}
 $('#ratingGrid').innerHTML=Array.from({length:10},(_,i)=>`<button>${i+1}</button>`).join('');
 $$('[data-go]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.go)));
-$('#detailHeroBack').addEventListener('click',returnFromDetail);
-$('#detailStickyBack').addEventListener('click',returnFromDetail);
-$('#detailReturnBtn').addEventListener('click',returnFromDetail);
-window.addEventListener('scroll',updateStickyDetailBack,{passive:true});
-window.addEventListener('popstate',event=>{
-  if(activeScreenId()==='detail'&&event.state?.appScreen!=='detail')performDetailReturn();
-});
-$$('[data-home-library-tab]').forEach(button=>button.addEventListener('click',()=>{
-  openLibraryTab(button.dataset.homeLibraryTab);
-}));
-$$('.nav button[data-screen]').forEach(b=>b.addEventListener('click',()=>{
-  const target=b.dataset.screen;
-  if(activeScreenId()==='detail')history.replaceState({appScreen:target},'');
-  go(target);
-}));
-$$('.library-tab').forEach(b=>b.addEventListener('click',()=>{
-  activeTab=b.dataset.tab;
-  $$('.library-tab').forEach(x=>x.classList.remove('active'));
-  b.classList.add('active');
-  renderLibrary();
-}));
-$$('[data-close]').forEach(b=>b.addEventListener('click',()=>closeOverlay(b.dataset.close)));
-$$('.overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)closeOverlay(o.id)}));
-
-$('#searchInput').addEventListener('input',()=>{$('#clearSearch').classList.toggle('show',$('#searchInput').value.length>0);renderLibrary()});
-$('#clearSearch').addEventListener('click',()=>{$('#searchInput').value='';$('#clearSearch').classList.remove('show');renderLibrary();$('#searchInput').focus()});
-$('#openFilters').addEventListener('click',()=>{
-  currentFilterContext='library';
-  filters=libraryFilters;
-  draft=structuredClone(libraryFilters);
-  updateFilterSummary();
-  openOverlay('filterOverlay');
-});
-$('#catalogSearchInput').addEventListener('input',()=>{
-  activeCatalogPreset=null;
-  clearTimeout(catalogSearchTimer);
-  catalogSearchTimer=setTimeout(searchSharedCatalog,350);
-});
-$('#clearCatalogSearch').addEventListener('click',()=>{
-  clearTimeout(catalogSearchTimer);
-  $('#catalogSearchInput').value='';
-  $('#clearCatalogSearch').classList.remove('show');
-  activeCatalogPreset=null;
-  catalogResults=[];
-  renderCatalog();
-  loadCatalogStarter();
-  $('#catalogSearchInput').focus();
-});
+$('#detailHeroBack').addEventListener('click',returnFromDetail);$('#detailStickyBack').addEventListener('click',returnFromDetail);$('#detailReturnBtn').addEventListener('click',returnFromDetail);window.addEventListener('scroll',updateStickyDetailBack,{passive:true});window.addEventListener('popstate',event=>{if(activeScreenId()==='detail'&&event.state?.appScreen!=='detail')performDetailReturn();});
+$$('[data-home-library-tab]').forEach(button=>button.addEventListener('click',()=>{openLibraryTab(button.dataset.homeLibraryTab);}));
+$$('.nav button[data-screen]').forEach(b=>b.addEventListener('click',()=>{const target=b.dataset.screen;if(activeScreenId()==='detail')history.replaceState({appScreen:target},'');go(target);}));
+$$('.library-tab').forEach(b=>b.addEventListener('click',()=>{activeTab=b.dataset.tab;$$('.library-tab').forEach(x=>x.classList.remove('active'));b.classList.add('active');renderLibrary();}));
+$$('[data-close]').forEach(b=>b.addEventListener('click',()=>closeOverlay(b.dataset.close)));$$('.overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)closeOverlay(o.id)}));
+$('#searchInput').addEventListener('input',()=>{$('#clearSearch').classList.toggle('show',$('#searchInput').value.length>0);renderLibrary()});$('#clearSearch').addEventListener('click',()=>{$('#searchInput').value='';$('#clearSearch').classList.remove('show');renderLibrary();$('#searchInput').focus()});
+$('#openFilters').addEventListener('click',()=>{currentFilterContext='library';filters=libraryFilters;draft=structuredClone(libraryFilters);updateFilterSummary();openOverlay('filterOverlay');});
+$('#catalogSearchInput').addEventListener('input',()=>{activeCatalogPreset=null;clearTimeout(catalogSearchTimer);catalogSearchTimer=setTimeout(searchSharedCatalog,350);});
+$('#clearCatalogSearch').addEventListener('click',()=>{clearTimeout(catalogSearchTimer);$('#catalogSearchInput').value='';$('#clearCatalogSearch').classList.remove('show');activeCatalogPreset=null;catalogResults=[];renderCatalog();loadCatalogStarter();$('#catalogSearchInput').focus();});
 $$('[data-catalog-preset]').forEach(b=>b.addEventListener('click',()=>applyCatalogPreset(b.dataset.catalogPreset)));
-$('#openCatalogFilters').addEventListener('click',()=>{
-  currentFilterContext='catalog';
-  filters=catalogFilters;
-  draft=structuredClone(catalogFilters);
-  updateFilterSummary();
-  openOverlay('filterOverlay');
-});
-$$('#typeOptions .choice').forEach(b=>b.addEventListener('click',()=>{
-  const v=b.dataset.value;
-  if(v==='all')draft.types=[];
-  else draft.types=draft.types.includes(v)?draft.types.filter(x=>x!==v):[...draft.types,v];
-  updateFilterSummary();
-}));
-$('#openGenres').addEventListener('click',()=>{draftGenres=[...draft.genres];$('#genreSearch').value='';renderGenreList();openOverlay('genreOverlay')});
-$('#genreSearch').addEventListener('input',renderGenreList);
-$('#saveGenres').addEventListener('click',()=>{draft.genres=[...draftGenres];closeOverlay('genreOverlay');updateFilterSummary()});
-$('#openRatingFilter').addEventListener('click',()=>{renderRatingFilter();openOverlay('ratingOverlay')});
-$('#openYearFilter').addEventListener('click',()=>{renderYearPresets();$('#yearFrom').value=draft.yearFrom||'';$('#yearTo').value=draft.yearTo||'';openOverlay('yearOverlay')});
-$('#saveYearRange').addEventListener('click',()=>{
-  const from=Number($('#yearFrom').value)||null,to=Number($('#yearTo').value)||null;
-  if(from&&to&&from>to){showToast('Год «от» не может быть больше года «до»');return}
-  draft.yearFrom=from;draft.yearTo=to;draft.yearLabel=from&&to?`${from}–${to}`:from?`После ${from}`:to?`До ${to}`:'Любой';
-  closeOverlay('yearOverlay');updateFilterSummary();
-});
-$('#resetFilters').addEventListener('click',()=>{
-  draft={types:[],genres:[],rating:currentFilterContext==='library'?0:6,yearFrom:null,yearTo:null,yearLabel:'Любой'};
-  updateFilterSummary();
-});
-$('#applyFilters').addEventListener('click',()=>{
-  setCurrentFilters(structuredClone(draft));
-  closeOverlay('filterOverlay');
-  if(currentFilterContext==='catalog')renderCatalog();
-  else renderLibrary();
-});
-
-$('#tonightBtn').addEventListener('click',()=>{states[currentId].status='watchlist';states[currentId].forTonight=true;persistStates();syncLibraryState(currentId);renderDetail();renderLibrary();renderCatalog();showToast('✓ Добавлено в «На вечер»')});
-$('#cancelTonightBtn').addEventListener('click',()=>{states[currentId].forTonight=false;persistStates();syncLibraryState(currentId);renderDetail();renderLibrary();renderCatalog();showToast('Убрано из «На вечер»')});
-$('#markWatchedBtn').addEventListener('click',()=>openRating());
-$('#personalRating').addEventListener('click',()=>openRating());
-$$('#ratingGrid button').forEach((b,i)=>b.addEventListener('click',()=>{selectedRating=i+1;renderRating()}));
-$('#cancelRatingBtn').addEventListener('click',()=>go('detail'));
-$('#saveRatingBtn').addEventListener('click',()=>{
-  if(selectedRating==null){showToast('Выберите оценку');return}
-  const d=new Date(),date=String(d.getDate()).padStart(2,'0')+'.'+String(d.getMonth()+1).padStart(2,'0')+'.'+d.getFullYear();
-  states[currentId].status='watched';states[currentId].forTonight=false;states[currentId].userRating=selectedRating;states[currentId].watchedDate=date;persistStates();syncLibraryState(currentId);
-  renderLibrary();renderDetail();go('detail');showToast('✓ Просмотр сохранён');
-});
-
-$('#quickChoiceBtn').addEventListener('click',()=>{
-  activeTab='watchlist';
-  $$('.library-tab').forEach(x=>x.classList.toggle('active',x.dataset.tab==='watchlist'));
-  libraryFilters={types:['film'],genres:[],rating:7,yearFrom:null,yearTo:null,yearLabel:'Любой'};
-  filters=libraryFilters;
-  renderLibrary();
-  go('library');
-  showToast('Показаны ваши фильмы с КП 7.0+');
-});
-function addToWatchlist(id){
-  states[id].status='watchlist';
-  states[id].forTonight=false;persistStates();syncLibraryState(id);
-  renderLibrary();
-  renderCatalog();
-  if(currentId===id&&$('#detail').classList.contains('active')){
-    renderDetail();
-    renderSimilarMovies(movies.find(m=>m.id===currentId));
-  }
-  showToast('Добавлено в «Хочу посмотреть»');
-}
-function removeFromWatchlist(id){
-  if(states[id].status!=='watchlist')return;
-  states[id].status='none';
-  states[id].forTonight=false;persistStates();syncLibraryState(id);
-  renderLibrary();
-  renderCatalog();
-  if(currentId===id&&$('#detail').classList.contains('active')){
-    renderDetail();
-    renderSimilarMovies(movies.find(m=>m.id===currentId));
-  }
-  showToast('Удалено из «Хочу посмотреть»','Вернуть',()=>addToWatchlist(id));
-}
-function toggleWatchlist(id){
-  states[id].status==='watchlist'?removeFromWatchlist(id):addToWatchlist(id);
-}
-$('#detailBookmarkBtn').addEventListener('click',()=>toggleWatchlist(currentId));
-
-
-function setImportStatus(message,isError=false){
-  const box=$('#importStatus');
-  box.textContent=message;
-  box.classList.add('show');
-  box.classList.toggle('error',isError);
-}
-function setImportLoading(loading,message='Запускаем импорт…'){
-  $('#importProgress').classList.toggle('show',loading);
-  $('#importProgressText').textContent=message;
-  $('#startKinopoiskImport').disabled=loading;
-  $('#startKinopoiskImport').textContent=loading?'Импорт идёт…':'Импортировать';
-}
-const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
-const IMPORT_SESSION_KEY='movieAppKinopoiskImportSessionV2';
-const IMPORT_REQUEST_INTERVAL=11000;
-function normalizeImportUrl(url){
-  try{
-    const parsed=new URL(url);
-    const match=parsed.pathname.match(/^\/user\/(\d+)\/movies\/list\/type\/(\d+)/i);
-    return match?`https://www.kinopoisk.ru/user/${match[1]}/movies/list/type/${match[2]}/`:url.trim();
-  }catch{return url.trim()}
-}
-function readImportSession(){
-  const session=readLocalJson(IMPORT_SESSION_KEY,null);
-  return session&&typeof session==='object'?session:null;
-}
-function saveImportSession(session){localStorage.setItem(IMPORT_SESSION_KEY,JSON.stringify(session))}
-function clearImportSession(){localStorage.removeItem(IMPORT_SESSION_KEY)}
-function mergePageItems(target,items){
-  const seen=new Set(target.map(item=>String(item.kinopoiskId)));
-  for(const item of items){
-    const id=String(item.kinopoiskId||'');
-    if(id&&!seen.has(id)){seen.add(id);target.push(item)}
-  }
-}
-async function requestImportPage(url,page){
-  const response=await fetch('/api/import-kinopoisk',{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({url,page}),
-    cache:'no-store'
-  });
-  const data=await response.json().catch(()=>({}));
-  if(response.status===429){
-    const retryAfter=Math.max(10,Number(data.retryAfter)||Number(response.headers.get('retry-after'))||10);
-    const error=new Error(data.error||'Нужно немного подождать перед следующим запросом.');
-    error.retryAfter=retryAfter;
-    throw error;
-  }
-  if(!response.ok)throw new Error(data.error||`Не удалось получить страницу ${page}.`);
-  return data;
-}
-async function runSequentialImport(url){
-  const normalizedUrl=normalizeImportUrl(url);
-  let session=readImportSession();
-  if(!session||session.url!==normalizedUrl||session.completed){
-    session={url:normalizedUrl,nextPage:1,totalPages:null,totalExpected:null,items:[],lastRequestAt:0,completed:false,startedAt:Date.now()};
-    saveImportSession(session);
-  }
-  if(session.nextPage>1){
-    setImportStatus(`Продолжаем сохранённый импорт со страницы ${session.nextPage}.`);
-  }
-  while(!session.completed){
-    const page=session.nextPage;
-    const total=session.totalPages||'?';
-    const found=session.items.length;
-    setImportLoading(true,`Страница ${page} из ${total} · найдено ${found}`);
-    const elapsed=Date.now()-(session.lastRequestAt||0);
-    if(elapsed<IMPORT_REQUEST_INTERVAL){
-      const seconds=Math.ceil((IMPORT_REQUEST_INTERVAL-elapsed)/1000);
-      setImportLoading(true,`Следующая страница через ${seconds} сек. · найдено ${found}`);
-      await wait(IMPORT_REQUEST_INTERVAL-elapsed);
-    }
-    let data;
-    try{
-      session.lastRequestAt=Date.now();
-      saveImportSession(session);
-      data=await requestImportPage(normalizedUrl,page);
-    }catch(error){
-      if(error.retryAfter){
-        const seconds=Math.max(10,error.retryAfter);
-        setImportLoading(true,`Cloudflare просит подождать ${seconds} сек. Импорт продолжится автоматически.`);
-        await wait(seconds*1000+500);
-        continue;
-      }
-      throw error;
-    }
-    mergePageItems(session.items,Array.isArray(data.items)?data.items:[]);
-    if(data.totalExpected)session.totalExpected=Number(data.totalExpected);
-    if(data.totalPages)session.totalPages=Number(data.totalPages);
-    if(!session.totalPages&&session.totalExpected)session.totalPages=Math.ceil(session.totalExpected/25);
-    session.nextPage=page+1;
-    session.completed=Boolean(session.totalPages&&page>=session.totalPages);
-    saveImportSession(session);
-  }
-  return session;
-}
-function mergeImportedMovies(items){
-  const knownIds=new Set(movies.map(m=>m.kinopoiskId).filter(Boolean).map(String));
-  let added=0,skipped=0;
-  for(const raw of items){
-    const movie=normalizeImportedMovie(raw);
-    if(!movie.kinopoiskId||knownIds.has(movie.kinopoiskId)){skipped++;continue}
-    movies.push(movie);
-    states[movie.id]={status:'watchlist',forTonight:false,userRating:null,watchedDate:null};
-    knownIds.add(movie.kinopoiskId);
-    added++;
-  }
-  genres=[...new Set(movies.flatMap(m=>m.genres))].sort();
-  persistImportedMovies();
-  persistStates();
-  if(localStorage.getItem(SERVER_LIBRARY_MIGRATION_KEY)==='1'){
-    const newlyAdded=movies.filter(movie=>movie.imported&&movie.kinopoiskId&&states[movie.id]?.status==='watchlist');
-    Promise.allSettled(newlyAdded.slice(-added).map(movie=>syncLibraryState(movie.id)));
-  }
-  return {added,skipped};
-}
-$('#openImport').addEventListener('click',()=>{
-  $('#importStatus').classList.remove('show','error');
-  const session=readImportSession();
-  const currentUrl=normalizeImportUrl($('#kinopoiskImportUrl').value);
-  if(session&&session.url===currentUrl&&!session.completed&&session.nextPage>1){
-    setImportStatus(`Есть незавершённый импорт: продолжим со страницы ${session.nextPage}${session.totalPages?` из ${session.totalPages}`:''}. Уже найдено ${session.items.length}.`);
-  }
-  openOverlay('importOverlay');
-});
-$('#startKinopoiskImport').addEventListener('click',async()=>{
-  const url=$('#kinopoiskImportUrl').value.trim();
-  if(!url){setImportStatus('Вставьте ссылку на публичный список Кинопоиска.',true);return}
-  $('#importStatus').classList.remove('show','error');
-  setImportLoading(true,'Начинаем последовательный импорт…');
-  try{
-    const session=await runSequentialImport(url);
-    const result=mergeImportedMovies(session.items);
-    renderLibrary();renderCatalog();
-    const expected=session.totalExpected?` Всего в списке: ${session.totalExpected}.`:'';
-    setImportStatus(`Готово. Добавлено: ${result.added}. Уже были в приложении: ${result.skipped}. Получено: ${session.items.length}.${expected}`);
-    showToast(`Импортировано ${result.added} фильмов`);
-    clearImportSession();
-  }catch(error){
-    const session=readImportSession();
-    const resume=session&&session.nextPage>1?` Прогресс сохранён: страница ${session.nextPage}, найдено ${session.items.length}. Нажмите «Импортировать», чтобы продолжить.`:'';
-    setImportStatus((error.message||'Ошибка импорта.')+resume,true);
-  }finally{setImportLoading(false)}
-});
-
-
-function setEnrichmentStatus(message,isError=false){
-  const box=$('#enrichmentStatus');
-  box.textContent=message;
-  box.classList.add('show');
-  box.classList.toggle('error',isError);
-}
-function mergeEnrichedMovie(data){
-  const id=String(data.kinopoiskId||'');
-  const movie=movies.find(item=>String(item.kinopoiskId||'')===id);
-  if(!movie)return false;
-  Object.assign(movie,{
-    title:data.title||movie.title,
-    originalTitle:data.originalTitle||movie.originalTitle||'',
-    year:Number(data.year)||movie.year,
-    type:['film','series','mini'].includes(data.type)?data.type:movie.type,
-    genres:Array.isArray(data.genres)&&data.genres.length?data.genres:movie.genres,
-    countries:Array.isArray(data.countries)?data.countries:(movie.countries||[]),
-    kp:Number(data.kp)>0?Number(data.kp):movie.kp,
-    imdb:Number(data.imdb)>0?Number(data.imdb):movie.imdb,
-    time:data.time||movie.time,
-    desc:data.desc||movie.desc,
-    posterUrl:data.posterUrl||movie.posterUrl||'',
-    backdropUrl:data.backdropUrl||movie.backdropUrl||'',
-    kpUrl:data.kpUrl||movie.kpUrl,
-    imdbUrl:data.imdbUrl||movie.imdbUrl||'',
-    trailer:data.trailer||movie.trailer,
-    enrichedAt:data.enrichedAt||new Date().toISOString()
-  });
-  return true;
-}
-$('#startEnrichmentTest').addEventListener('click',async()=>{
-  const candidates=movies.filter(movie=>movie.imported&&movie.kinopoiskId&&!movie.enrichedAt).slice(0,30);
-  if(!candidates.length){setEnrichmentStatus('Все доступные тестовые карточки уже загружены.');return}
-  const button=$('#startEnrichmentTest');
-  button.disabled=true;
-  button.textContent='Загружаем карточки…';
-  setEnrichmentStatus(`Запрашиваем данные для ${candidates.length} фильмов. Не закрывайте страницу.`);
-  try{
-    const response=await fetch('/api/movie-details',{
-      method:'POST',headers:{'Content-Type':'application/json'},cache:'no-store',
-      body:JSON.stringify({kinopoiskIds:candidates.map(movie=>movie.kinopoiskId)})
-    });
-    const data=await response.json().catch(()=>({}));
-    if(!response.ok)throw new Error(data.error||'Не удалось загрузить карточки.');
-    let updated=0;
-    for(const item of Array.isArray(data.items)?data.items:[])if(mergeEnrichedMovie(item))updated++;
-    genres=[...new Set(movies.flatMap(movie=>movie.genres))].sort();
-    persistImportedMovies();
-    renderLibrary();renderCatalog();
-    setEnrichmentStatus(`Готово. Полные данные получены для ${updated} из ${candidates.length}. Ошибок: ${(data.errors||[]).length}. Проверьте постеры, названия, описания и рейтинги.`);
-    showToast(`Обновлено ${updated} карточек`);
-  }catch(error){setEnrichmentStatus(error.message||'Ошибка загрузки карточек.',true)}
-  finally{button.disabled=false;button.textContent='Загрузить данные для следующих 30 фильмов'}
-});
-
+$('#openCatalogFilters').addEventListener('click',()=>{currentFilterContext='catalog';filters=catalogFilters;draft=structuredClone(catalogFilters);updateFilterSummary();openOverlay('filterOverlay');});
+$$('#typeOptions .choice').forEach(b=>b.addEventListener('click',()=>{const v=b.dataset.value;if(v==='all')draft.types=[];else draft.types=draft.types.includes(v)?draft.types.filter(x=>x!==v):[...draft.types,v];updateFilterSummary();}));
+$('#openGenres').addEventListener('click',()=>{draftGenres=[...draft.genres];$('#genreSearch').value='';renderGenreList();openOverlay('genreOverlay')});$('#genreSearch').addEventListener('input',renderGenreList);$('#saveGenres').addEventListener('click',()=>{draft.genres=[...draftGenres];closeOverlay('genreOverlay');updateFilterSummary()});$('#openRatingFilter').addEventListener('click',()=>{renderRatingFilter();openOverlay('ratingOverlay')});$('#openYearFilter').addEventListener('click',()=>{renderYearPresets();$('#yearFrom').value=draft.yearFrom||'';$('#yearTo').value=draft.yearTo||'';openOverlay('yearOverlay')});
+$('#saveYearRange').addEventListener('click',()=>{const from=Number($('#yearFrom').value)||null,to=Number($('#yearTo').value)||null;if(from&&to&&from>to){showToast('Год «от» не может быть больше года «до»');return}draft.yearFrom=from;draft.yearTo=to;draft.yearLabel=from&&to?`${from}–${to}`:from?`После ${from}`:to?`До ${to}`:'Любой';closeOverlay('yearOverlay');updateFilterSummary();});
+$('#resetFilters').addEventListener('click',()=>{draft={types:[],genres:[],rating:currentFilterContext==='library'?0:6,yearFrom:null,yearTo:null,yearLabel:'Любой'};updateFilterSummary();});
+$('#applyFilters').addEventListener('click',()=>{setCurrentFilters(structuredClone(draft));closeOverlay('filterOverlay');if(currentFilterContext==='catalog')renderCatalog();else renderLibrary();});
+$('#tonightBtn').addEventListener('click',()=>{states[currentId].status='watchlist';states[currentId].forTonight=true;persistStates();syncLibraryState(currentId);renderDetail();renderLibrary();renderCatalog();showToast('✓ Добавлено в «На вечер»')});$('#cancelTonightBtn').addEventListener('click',()=>{states[currentId].forTonight=false;persistStates();syncLibraryState(currentId);renderDetail();renderLibrary();renderCatalog();showToast('Убрано из «На вечер»')});$('#markWatchedBtn').addEventListener('click',()=>openRating());$('#personalRating').addEventListener('click',()=>openRating());$$('#ratingGrid button').forEach((b,i)=>b.addEventListener('click',()=>{selectedRating=i+1;renderRating()}));$('#cancelRatingBtn').addEventListener('click',()=>go('detail'));
+$('#saveRatingBtn').addEventListener('click',()=>{if(selectedRating==null){showToast('Выберите оценку');return}const d=new Date(),date=String(d.getDate()).padStart(2,'0')+'.'+String(d.getMonth()+1).padStart(2,'0')+'.'+d.getFullYear();states[currentId].status='watched';states[currentId].forTonight=false;states[currentId].userRating=selectedRating;states[currentId].watchedDate=date;persistStates();syncLibraryState(currentId);renderLibrary();renderDetail();go('detail');showToast('✓ Просмотр сохранён');});
+$('#quickChoiceBtn').addEventListener('click',()=>{activeTab='watchlist';$$('.library-tab').forEach(x=>x.classList.toggle('active',x.dataset.tab==='watchlist'));libraryFilters={types:['film'],genres:[],rating:7,yearFrom:null,yearTo:null,yearLabel:'Любой'};filters=libraryFilters;renderLibrary();go('library');showToast('Показаны ваши фильмы с КП 7.0+');});
+function addToWatchlist(id){states[id].status='watchlist';states[id].forTonight=false;persistStates();syncLibraryState(id);renderLibrary();renderCatalog();if(currentId===id&&$('#detail').classList.contains('active')){renderDetail();renderSimilarMovies(movies.find(m=>m.id===currentId));}showToast('Добавлено в «Хочу посмотреть»');}
+function removeFromWatchlist(id){if(states[id].status!=='watchlist')return;states[id].status='none';states[id].forTonight=false;persistStates();syncLibraryState(id);renderLibrary();renderCatalog();if(currentId===id&&$('#detail').classList.contains('active')){renderDetail();renderSimilarMovies(movies.find(m=>m.id===currentId));}showToast('Удалено из «Хочу посмотреть»','Вернуть',()=>addToWatchlist(id));}
+function toggleWatchlist(id){states[id].status==='watchlist'?removeFromWatchlist(id):addToWatchlist(id);}$('#detailBookmarkBtn').addEventListener('click',()=>toggleWatchlist(currentId));
+function setImportStatus(message,isError=false){const box=$('#importStatus');box.textContent=message;box.classList.add('show');box.classList.toggle('error',isError);}
+function setImportLoading(loading,message='Запускаем импорт…'){$('#importProgress').classList.toggle('show',loading);$('#importProgressText').textContent=message;$('#startKinopoiskImport').disabled=loading;$('#startKinopoiskImport').textContent=loading?'Импорт идёт…':'Импортировать';}
+const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));const IMPORT_SESSION_KEY='movieAppKinopoiskImportSessionV2';const IMPORT_REQUEST_INTERVAL=11000;
+function normalizeImportUrl(url){try{const parsed=new URL(url);const match=parsed.pathname.match(/^\/user\/(\d+)\/movies\/list\/type\/(\d+)/i);return match?`https://www.kinopoisk.ru/user/${match[1]}/movies/list/type/${match[2]}/`:url.trim();}catch{return url.trim()}}
+function readImportSession(){const session=readLocalJson(IMPORT_SESSION_KEY,null);return session&&typeof session==='object'?session:null;}function saveImportSession(session){localStorage.setItem(IMPORT_SESSION_KEY,JSON.stringify(session))}function clearImportSession(){localStorage.removeItem(IMPORT_SESSION_KEY)}
+function mergePageItems(target,items){const seen=new Set(target.map(item=>String(item.kinopoiskId)));for(const item of items){const id=String(item.kinopoiskId||'');if(id&&!seen.has(id)){seen.add(id);target.push(item)}}}
+async function requestImportPage(url,page){const response=await fetch('/api/import-kinopoisk',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url,page}),cache:'no-store'});const data=await response.json().catch(()=>({}));if(response.status===429){const retryAfter=Math.max(10,Number(data.retryAfter)||Number(response.headers.get('retry-after'))||10);const error=new Error(data.error||'Нужно немного подождать перед следующим запросом.');error.retryAfter=retryAfter;throw error;}if(!response.ok)throw new Error(data.error||`Не удалось получить страницу ${page}.`);return data;}
+async function runSequentialImport(url){const normalizedUrl=normalizeImportUrl(url);let session=readImportSession();if(!session||session.url!==normalizedUrl||session.completed){session={url:normalizedUrl,nextPage:1,totalPages:null,totalExpected:null,items:[],lastRequestAt:0,completed:false,startedAt:Date.now()};saveImportSession(session);}if(session.nextPage>1){setImportStatus(`Продолжаем сохранённый импорт со страницы ${session.nextPage}.`);}while(!session.completed){const page=session.nextPage;const total=session.totalPages||'?';const found=session.items.length;setImportLoading(true,`Страница ${page} из ${total} · найдено ${found}`);const elapsed=Date.now()-(session.lastRequestAt||0);if(elapsed<IMPORT_REQUEST_INTERVAL){const seconds=Math.ceil((IMPORT_REQUEST_INTERVAL-elapsed)/1000);setImportLoading(true,`Следующая страница через ${seconds} сек. · найдено ${found}`);await wait(IMPORT_REQUEST_INTERVAL-elapsed);}let data;try{session.lastRequestAt=Date.now();saveImportSession(session);data=await requestImportPage(normalizedUrl,page);}catch(error){if(error.retryAfter){const seconds=Math.max(10,error.retryAfter);setImportLoading(true,`Cloudflare просит подождать ${seconds} сек. Импорт продолжится автоматически.`);await wait(seconds*1000+500);continue;}throw error;}mergePageItems(session.items,Array.isArray(data.items)?data.items:[]);if(data.totalExpected)session.totalExpected=Number(data.totalExpected);if(data.totalPages)session.totalPages=Number(data.totalPages);if(!session.totalPages&&session.totalExpected)session.totalPages=Math.ceil(session.totalExpected/25);session.nextPage=page+1;session.completed=Boolean(session.totalPages&&page>=session.totalPages);saveImportSession(session);}return session;}
+function mergeImportedMovies(items){const knownIds=new Set(movies.map(m=>m.kinopoiskId).filter(Boolean).map(String));let added=0,skipped=0;for(const raw of items){const movie=normalizeImportedMovie(raw);if(!movie.kinopoiskId||knownIds.has(movie.kinopoiskId)){skipped++;continue}movies.push(movie);states[movie.id]={status:'watchlist',forTonight:false,userRating:null,watchedDate:null};knownIds.add(movie.kinopoiskId);added++;}genres=[...new Set(movies.flatMap(m=>m.genres))].sort();persistImportedMovies();persistStates();if(localStorage.getItem(SERVER_LIBRARY_MIGRATION_KEY)==='1'){const newlyAdded=movies.filter(movie=>movie.imported&&movie.kinopoiskId&&states[movie.id]?.status==='watchlist');Promise.allSettled(newlyAdded.slice(-added).map(movie=>syncLibraryState(movie.id)));}return {added,skipped};}
+$('#openImport').addEventListener('click',()=>{$('#importStatus').classList.remove('show','error');const session=readImportSession();const currentUrl=normalizeImportUrl($('#kinopoiskImportUrl').value);if(session&&session.url===currentUrl&&!session.completed&&session.nextPage>1){setImportStatus(`Есть незавершённый импорт: продолжим со страницы ${session.nextPage}${session.totalPages?` из ${session.totalPages}`:''}. Уже найдено ${session.items.length}.`);}openOverlay('importOverlay');});
+$('#startKinopoiskImport').addEventListener('click',async()=>{const url=$('#kinopoiskImportUrl').value.trim();if(!url){setImportStatus('Вставьте ссылку на публичный список Кинопоиска.',true);return}$('#importStatus').classList.remove('show','error');setImportLoading(true,'Начинаем последовательный импорт…');try{const session=await runSequentialImport(url);const result=mergeImportedMovies(session.items);renderLibrary();renderCatalog();const expected=session.totalExpected?` Всего в списке: ${session.totalExpected}.`:'';setImportStatus(`Готово. Добавлено: ${result.added}. Уже были в приложении: ${result.skipped}. Получено: ${session.items.length}.${expected}`);showToast(`Импортировано ${result.added} фильмов`);clearImportSession();}catch(error){const session=readImportSession();const resume=session&&session.nextPage>1?` Прогресс сохранён: страница ${session.nextPage}, найдено ${session.items.length}. Нажмите «Импортировать», чтобы продолжить.`:'';setImportStatus((error.message||'Ошибка импорта.')+resume,true);}finally{setImportLoading(false)}});
+function setEnrichmentStatus(message,isError=false){const box=$('#enrichmentStatus');box.textContent=message;box.classList.add('show');box.classList.toggle('error',isError);}
+function mergeEnrichedMovie(data){const id=String(data.kinopoiskId||'');const movie=movies.find(item=>String(item.kinopoiskId||'')===id);if(!movie)return false;Object.assign(movie,{title:data.title||movie.title,originalTitle:data.originalTitle||movie.originalTitle||'',year:Number(data.year)||movie.year,type:['film','series','mini'].includes(data.type)?data.type:movie.type,genres:Array.isArray(data.genres)&&data.genres.length?data.genres:movie.genres,countries:Array.isArray(data.countries)?data.countries:(movie.countries||[]),kp:Number(data.kp)>0?Number(data.kp):movie.kp,imdb:Number(data.imdb)>0?Number(data.imdb):movie.imdb,time:data.time||movie.time,desc:data.desc||movie.desc,posterUrl:data.posterUrl||movie.posterUrl||'',backdropUrl:data.backdropUrl||movie.backdropUrl||'',kpUrl:data.kpUrl||movie.kpUrl,imdbUrl:data.imdbUrl||movie.imdbUrl||'',trailer:data.trailer||movie.trailer,enrichedAt:data.enrichedAt||new Date().toISOString()});return true;}
+$('#startEnrichmentTest').addEventListener('click',async()=>{const candidates=movies.filter(movie=>movie.imported&&movie.kinopoiskId&&!movie.enrichedAt).slice(0,30);if(!candidates.length){setEnrichmentStatus('Все доступные тестовые карточки уже загружены.');return}const button=$('#startEnrichmentTest');button.disabled=true;button.textContent='Загружаем карточки…';setEnrichmentStatus(`Запрашиваем данные для ${candidates.length} фильмов. Не закрывайте страницу.`);try{const response=await fetch('/api/movie-details',{method:'POST',headers:{'Content-Type':'application/json'},cache:'no-store',body:JSON.stringify({kinopoiskIds:candidates.map(movie=>movie.kinopoiskId)})});const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.error||'Не удалось загрузить карточки.');let updated=0;for(const item of Array.isArray(data.items)?data.items:[])if(mergeEnrichedMovie(item))updated++;genres=[...new Set(movies.flatMap(movie=>movie.genres))].sort();persistImportedMovies();renderLibrary();renderCatalog();setEnrichmentStatus(`Готово. Полные данные получены для ${updated} из ${candidates.length}. Ошибок: ${(data.errors||[]).length}. Проверьте постеры, названия, описания и рейтинги.`);showToast(`Обновлено ${updated} карточек`);}catch(error){setEnrichmentStatus(error.message||'Ошибка загрузки карточек.',true)}finally{button.disabled=false;button.textContent='Загрузить данные для следующих 30 фильмов'}});
 let themeChoice=localStorage.getItem('movieAppTheme')||'system';
-function resolvedTheme(){
-  if(themeChoice==='system')return matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';
-  return themeChoice;
-}
-function updateThemeIcon(){
-  $('#quickThemeToggle').textContent=resolvedTheme()==='dark'?'☀':'☾';
-}
-function applyTheme(choice){
-  themeChoice=choice;
-  localStorage.setItem('movieAppTheme',choice);
-  document.documentElement.dataset.theme=choice;
-  $$('[data-theme-choice]').forEach(btn=>{
-    const active=btn.dataset.themeChoice===choice;
-    btn.classList.toggle('active',active);
-    btn.querySelector('.check').textContent=active?'✓':'';
-  });
-  updateThemeIcon();
-}
-$$('[data-theme-choice]').forEach(btn=>btn.addEventListener('click',()=>applyTheme(btn.dataset.themeChoice)));
-$('#quickThemeToggle').addEventListener('click',()=>applyTheme(resolvedTheme()==='dark'?'light':'dark'));
-$('#settingsBtn').addEventListener('click',()=>{applyTheme(themeChoice);openOverlay('settingsOverlay')});
-matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change',()=>{if(themeChoice==='system')updateThemeIcon()});
-applyTheme(themeChoice);
-renderLibrary();
-renderCatalog();
-initializeServerLibrary();
+function resolvedTheme(){if(themeChoice==='system')return matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';return themeChoice;}
+function updateThemeIcon(){$('#quickThemeToggle').textContent=resolvedTheme()==='dark'?'☀':'☾';}
+function applyTheme(choice){themeChoice=choice;localStorage.setItem('movieAppTheme',choice);document.documentElement.dataset.theme=choice;$$('[data-theme-choice]').forEach(btn=>{const active=btn.dataset.themeChoice===choice;btn.classList.toggle('active',active);btn.querySelector('.check').textContent=active?'✓':'';});updateThemeIcon();}
+$$('[data-theme-choice]').forEach(btn=>btn.addEventListener('click',()=>applyTheme(btn.dataset.themeChoice)));$('#quickThemeToggle').addEventListener('click',()=>applyTheme(resolvedTheme()==='dark'?'light':'dark'));$('#settingsBtn').addEventListener('click',()=>{applyTheme(themeChoice);openOverlay('settingsOverlay')});matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change',()=>{if(themeChoice==='system')updateThemeIcon()});applyTheme(themeChoice);renderLibrary();renderCatalog();initializeServerLibrary();
 </script>
 </body>
 </html>
