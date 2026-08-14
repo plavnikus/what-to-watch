@@ -27,7 +27,6 @@ h1{font-size:24px;margin:0 0 8px}p{margin:0;color:#6f7787;line-height:1.45}.erro
   const message=document.getElementById('message');
   const spinner=document.getElementById('spinner');
   const TELEGRAM_USER_KEY='movieAppTelegramUserIdV1';
-  const LEGACY_CLAIM_KEY='movieAppLegacyClaimDoneV1';
   try{
     tg?.ready();
     tg?.expand();
@@ -53,20 +52,8 @@ h1{font-size:24px;margin:0 0 8px}p{margin:0;color:#6f7787;line-height:1.45}.erro
     }
     localStorage.setItem(TELEGRAM_USER_KEY,currentUserId);
 
-    if(localStorage.getItem(LEGACY_CLAIM_KEY)!==currentUserId){
-      message.textContent='Проверяем вашу сохранённую кинотеку…';
-      const claimResponse=await fetch('/api/legacy-library-claim',{
-        method:'POST',
-        cache:'no-store',
-        credentials:'same-origin'
-      });
-      const claim=await claimResponse.json().catch(()=>({}));
-      if(claimResponse.status!==403&&(!claimResponse.ok||!claim.ok)){
-        throw new Error(claim.error||'Не удалось проверить сохранённую кинотеку.');
-      }
-      localStorage.setItem(LEGACY_CLAIM_KEY,currentUserId);
-    }
-
+    // Совместимость с текущим index.html: серверная библиотека уже является
+    // источником истины, поэтому старую bulk-миграцию localStorage запускать не нужно.
     localStorage.setItem('movieAppServerLibraryMigratedV1','1');
     location.replace('/');
   }catch(error){
