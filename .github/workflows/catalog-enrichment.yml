@@ -71,10 +71,12 @@ jobs:
           total_attempted=0
           total_enriched=0
           total_failed=0
+          total_timeouts=0
 
           for batch_number in $(seq 1 "$max_batches"); do
             echo "Starting enrichment batch ${batch_number}/${max_batches}"
 
+            curl_exit=0
             raw_response="$(curl --silent --show-error \
               --connect-timeout 15 \
               --max-time 120 \
@@ -83,7 +85,19 @@ jobs:
               --header "content-type: application/json" \
               --data '{}' \
               --write-out $'\n%{http_code}' \
-              "${CATALOG_ENRICH_BASE_URL}?limit=${batch_size}")"
+              "${CATALOG_ENRICH_BASE_URL}?limit=${batch_size}")" || curl_exit=$?
+
+            if [ "$curl_exit" -ne 0 ]; then
+              if [ "$curl_exit" -eq 28 ]; then
+                total_timeouts=$((total_timeouts + 1))
+                echo "Catalog enrichment batch ${batch_number} timed out after 120 seconds. Skipping this batch and continuing safely."
+                sleep 5
+                continue
+              fi
+
+              echo "Catalog enrichment curl request failed with exit code ${curl_exit}."
+              exit "$curl_exit"
+            fi
 
             http_status="${raw_response##*$'\n'}"
             body="${raw_response%$'\n'*}"
@@ -137,4 +151,5 @@ jobs:
             echo "- Attempted: ${total_attempted}"
             echo "- Enriched: ${total_enriched}"
             echo "- Failed: ${total_failed}"
+            echo "- Transport timeouts: ${total_timeouts}"
           } >> "$GITHUB_STEP_SUMMARY"
