@@ -67,7 +67,7 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
 .app .detail-body>.similar-section{order:11}
 .app #detailReturnBtn{order:12}
 
-/* When the hero back control scrolls away, reuse the app header instead of covering movie content. */
+/* When the hero back control scrolls away, show a real top toolbar instead of covering movie content. */
 .app .detail-sticky-back{
   top:10px;
   left:max(12px,calc(50% - 258px));
@@ -76,6 +76,16 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
   border-radius:14px;
   display:flex;align-items:center;justify-content:center;gap:5px;
   font-size:21px;font-weight:750;
+  isolation:isolate;
+}
+.app .detail-sticky-back::before{
+  content:"";
+  position:fixed;
+  z-index:-1;
+  top:0;left:0;right:0;
+  height:62px;
+  background:var(--bg);
+  border-bottom:1px solid var(--line);
 }
 .app .detail-sticky-back::after{
   content:"Назад";
@@ -84,6 +94,10 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
 }
 .app:has(#detailStickyBack.show) header .topbar>div:first-child{
   visibility:hidden;
+}
+.app:has(#detailStickyBack.show) header{
+  background:var(--bg);
+  backdrop-filter:none;
 }
 @media(max-width:540px){
   .app .detail-sticky-back{left:12px}
