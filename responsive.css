@@ -54,6 +54,11 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
 }
 .app #detailBookmarkBtn.saved::after{content:"✓ Хочу посмотреть"}
 .app #detailBookmarkBtn[hidden]{display:none}
+
+/* The action button already communicates none/watchlist. Keep only extra state such as “На вечер”. */
+.app .detail-body:has(#detailBookmarkBtn:not([hidden])) #detailStatus .badge:first-child{display:none}
+.app .detail-body:has(#detailBookmarkBtn:not([hidden])) #detailStatus:not(:has(.badge:nth-child(2))){display:none}
+
 .app #personalRating{order:6}
 .app #tonightBtn{order:7}
 .app #cancelTonightBtn{order:8}
