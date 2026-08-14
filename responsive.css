@@ -29,6 +29,44 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
 .app .home-status-card strong,.app .home-status-card .muted{min-width:0}
 .app .library-head,.app .catalog-head,.app .result-head{min-width:0}
 
+/* Full movie card: explicit watchlist action instead of icon-only control. */
+.app .detail-body{display:flex;flex-direction:column}
+.app .detail-title-row{display:contents}
+.app #detailTitle{order:0;margin-bottom:8px}
+.app #detailMeta{order:1}
+.app .detail-body>.rating-links{order:2}
+.app #detailDesc{order:3}
+.app #detailStatus{order:4}
+.app #detailBookmarkBtn{
+  order:5;
+  width:100%;height:auto;min-height:48px;
+  margin-top:14px;padding:13px 14px;
+  border:0;border-radius:15px;
+  display:block;
+  background:var(--accent);color:var(--accentText);
+  font-weight:750;font-size:15px;text-align:center;
+}
+.app #detailBookmarkBtn svg{display:none}
+.app #detailBookmarkBtn::after{content:"＋ Хочу посмотреть"}
+.app #detailBookmarkBtn.saved{
+  background:var(--panel2);color:var(--text);
+  border:1px solid var(--line);
+}
+.app #detailBookmarkBtn.saved::after{content:"✓ Хочу посмотреть"}
+.app #detailBookmarkBtn[hidden]{display:none}
+
+/* The action button already communicates none/watchlist. Keep only extra state such as “На вечер”. */
+.app .detail-body:has(#detailBookmarkBtn:not([hidden])) #detailStatus .badge:first-child{display:none}
+.app .detail-body:has(#detailBookmarkBtn:not([hidden])) #detailStatus:not(:has(.badge:nth-child(2))){display:none}
+
+.app #personalRating{order:6}
+.app #tonightBtn{order:7}
+.app #cancelTonightBtn{order:8}
+.app #markWatchedBtn{order:9}
+.app .detail-body>.card{order:10}
+.app .detail-body>.similar-section{order:11}
+.app #detailReturnBtn{order:12}
+
 @media (min-width:391px) and (max-width:430px){
   .app .home-status-card{padding:11px}
   .app .home-status-card strong{font-size:23px}
