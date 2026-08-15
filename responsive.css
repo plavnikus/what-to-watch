@@ -67,7 +67,20 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
 .app .detail-body>.similar-section{order:11}
 .app #detailReturnBtn{order:12}
 
-/* Sticky back lives visually inside the existing app header, never on a second overlay. */
+/* Once the hero control scrolls away, the real app header becomes the return toolbar. */
+.app:has(#detailStickyBack.show) header{
+  position:fixed;
+  top:0;
+  left:50%;
+  transform:translateX(-50%);
+  width:min(540px,100%);
+  z-index:30;
+  background:var(--bg);
+  backdrop-filter:none;
+}
+.app:has(#detailStickyBack.show) header .topbar>div:first-child{visibility:hidden}
+.app:has(#detailStickyBack.show) main{padding-top:78px}
+
 .app .detail-sticky-back{
   top:10px;
   left:max(12px,calc(50% - 258px));
@@ -83,13 +96,6 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
   content:"Назад";
   font-size:14px;
   line-height:1;
-}
-.app:has(#detailStickyBack.show) header{
-  background:var(--bg);
-  backdrop-filter:none;
-}
-.app:has(#detailStickyBack.show) header .topbar>div:first-child{
-  visibility:hidden;
 }
 @media(max-width:540px){
   .app .detail-sticky-back{left:12px}
