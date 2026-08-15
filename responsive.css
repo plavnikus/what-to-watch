@@ -67,21 +67,15 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
 .app .detail-body>.similar-section{order:11}
 .app #detailReturnBtn{order:12}
 
-/* Once the hero control scrolls away, the real app header becomes the return toolbar. */
+/* Reuse the existing sticky header as the visual home for the return control. */
 .app:has(#detailStickyBack.show) header{
-  position:fixed;
-  top:0;
-  left:50%;
-  transform:translateX(-50%);
-  width:min(540px,100%);
-  z-index:30;
   background:var(--bg);
   backdrop-filter:none;
 }
 .app:has(#detailStickyBack.show) header .topbar>div:first-child{visibility:hidden}
-.app:has(#detailStickyBack.show) main{padding-top:78px}
 
 .app .detail-sticky-back{
+  z-index:31;
   top:10px;
   left:max(12px,calc(50% - 258px));
   width:auto;height:42px;min-width:88px;
