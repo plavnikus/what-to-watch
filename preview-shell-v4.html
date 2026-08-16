@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Что посмотреть?</title>
+</head>
+<body>
+<script>
+(async()=>{
+  try{
+    const response=await fetch('/index.html?previewBuild=qc-v4',{cache:'no-store'});
+    if(!response.ok)throw new Error('Не удалось загрузить Preview');
+    let html=await response.text();
+    html=html.replace('<script src="quick-choice.js"></'+'script>','<script src="quick-choice-v4.js?build=98253a3"></'+'script>');
+    document.open();
+    document.write(html);
+    document.close();
+  }catch(error){
+    document.body.textContent=String(error?.message||error);
+  }
+})();
+</script>
+</body>
+</html>
