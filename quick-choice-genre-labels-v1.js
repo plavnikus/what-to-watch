@@ -38,7 +38,8 @@
       const movie=movies.find(item=>String(item.id)===String(card.dataset.choiceOpen));
       const line=card.querySelector('.genre-line');
       if(!movie||!line)return;
-      line.textContent=preferredGenres(movie,core).join(' · ');
+      const next=preferredGenres(movie,core).join(' · ');
+      if(line.textContent!==next)line.textContent=next;
     });
   }
 
