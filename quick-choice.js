@@ -9,7 +9,8 @@
 
   (async () => {
     try {
-      await load('/kinopoisk-import-onboarding-v1.js?v=pr16-1');
+      await load('/kinopoisk-import-onboarding-v1.js?v=pr16-2');
+      await load('/kinopoisk-import-visibility-fix-v1.js?v=pr16-2');
     } catch (error) {
       console.error('Kinopoisk import onboarding failed to load', error);
     }
