@@ -1,9 +1,11 @@
-// Importer version: 5.0 — sequential Cloudflare Browser Run /content
+// Importer version: 5.1 — profile URL + sequential Cloudflare Browser Run /content
 const JSON_HEADERS={
   'content-type':'application/json; charset=utf-8',
   'cache-control':'no-store',
   'x-content-type-options':'nosniff'
 };
+
+const WATCHLIST_TYPE='3575';
 
 const decodeHtml=value=>String(value||'')
   .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,' ')
@@ -28,13 +30,20 @@ function jsonResponse(data,status=200,extraHeaders={}){
 function normalizeListUrl(input){
   let url;
   try{url=new URL(input)}catch{throw new Error('Некорректная ссылка.')}
-  if(!/(^|\.)kinopoisk\.ru$/i.test(url.hostname))throw new Error('Нужна ссылка на kinopoisk.ru.');
-  const match=url.pathname.match(/^\/user\/(\d+)\/movies\/list\/type\/(\d+)/i);
-  if(!match)throw new Error('Нужна публичная ссылка на список фильмов пользователя Кинопоиска.');
+  if(!/(^|\.)kinopoisk\.ru$/i.test(url.hostname))throw new Error('Нужна ссылка на профиль Кинопоиска.');
+
+  const listMatch=url.pathname.match(/^\/user\/(\d+)\/movies\/list\/type\/(\d+)/i);
+  const profileMatch=url.pathname.match(/^\/user\/(\d+)\/?$/i);
+  const userId=listMatch?.[1]||profileMatch?.[1];
+  const listType=listMatch?.[2]||WATCHLIST_TYPE;
+
+  if(!userId)throw new Error('Нужна ссылка на ваш профиль Кинопоиска вида kinopoisk.ru/user/1234567/.');
+
   return {
-    userId:match[1],
-    listType:match[2],
-    base:`https://www.kinopoisk.ru/user/${match[1]}/movies/list/type/${match[2]}/sort/default/vector/desc/`
+    userId,
+    listType,
+    sourceType:listMatch?'list':'profile',
+    base:`https://www.kinopoisk.ru/user/${userId}/movies/list/type/${listType}/sort/default/vector/desc/`
   };
 }
 
@@ -131,14 +140,15 @@ export async function onRequestPost(context){
       const text=decodeHtml(html);
       const sample=text.slice(0,260);
       throw new Error(page===1
-        ?`Страница открылась, но фильмы не распознаны.${sample?` Начало ответа: ${sample}`:''}`
+        ?`Страница открылась, но фильмы из «Буду смотреть» не распознаны.${sample?` Начало ответа: ${sample}`:''}`
         :`На странице ${page} фильмы не распознаны. Импорт можно продолжить повторно.`);
     }
     return jsonResponse({
       source:'kinopoisk-browser-run-content',
-      importerVersion:'5.0',
+      importerVersion:'5.1',
       userId:list.userId,
       listType:list.listType,
+      sourceType:list.sourceType,
       page,
       pageUrl,
       totalExpected:totalExpected||null,
@@ -151,10 +161,10 @@ export async function onRequestPost(context){
       return jsonResponse({
         error:'Cloudflare временно ограничил частоту запросов.',
         retryAfter:Math.max(10,error.retryAfter||10),
-        importerVersion:'5.0'
+        importerVersion:'5.1'
       },429,{'retry-after':String(Math.max(10,error.retryAfter||10))});
     }
-    return jsonResponse({error:error.message||'Ошибка импорта.',importerVersion:'5.0'},400);
+    return jsonResponse({error:error.message||'Ошибка импорта.',importerVersion:'5.1'},400);
   }
 }
 
