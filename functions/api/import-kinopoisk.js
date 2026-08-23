@@ -1,4 +1,4 @@
-// Importer version: 5.2 — profile URL + resilient Cloudflare Browser Run /content
+// Importer version: 5.3 — profile URL + resilient Cloudflare Browser Run /content
 const JSON_HEADERS={
   'content-type':'application/json; charset=utf-8',
   'cache-control':'no-store',
@@ -94,6 +94,10 @@ function browserCredentials(env){
   return {accountId,token};
 }
 
+function isDailyBrowserLimit(message){
+  return /browser\s*time\s*limit\s*exceeded|time\s*limit\s*exceeded\s*for\s*today|browser\s*hours?.*limit/i.test(String(message||''));
+}
+
 async function fetchBrowserHtml(url,env,{waitForTimeout=0,waitUntil='networkidle2'}={}){
   const {accountId,token}=browserCredentials(env);
   const endpoint=`https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/browser-rendering/content`;
@@ -119,6 +123,7 @@ async function fetchBrowserHtml(url,env,{waitForTimeout=0,waitUntil='networkidle
     const error=new Error(message);
     error.status=response.status;
     error.retryAfter=retryAfter;
+    error.dailyLimit=isDailyBrowserLimit(message);
     throw error;
   }
   try{
@@ -164,7 +169,7 @@ export async function onRequestPost(context){
     }
     return jsonResponse({
       source:'kinopoisk-browser-run-content',
-      importerVersion:'5.2',
+      importerVersion:'5.3',
       userId:list.userId,
       listType:list.listType,
       sourceType:list.sourceType,
@@ -177,14 +182,22 @@ export async function onRequestPost(context){
       items
     });
   }catch(error){
+    if(error?.dailyLimit){
+      return jsonResponse({
+        error:'Лимит Browser Run на сегодня исчерпан. Прогресс импорта сохранён — продолжите позже, и приложение начнёт с той же страницы.',
+        retryable:false,
+        importerVersion:'5.3'
+      },503);
+    }
     if(error?.status===429){
       return jsonResponse({
         error:'Cloudflare временно ограничил частоту запросов.',
         retryAfter:Math.max(10,error.retryAfter||10),
-        importerVersion:'5.2'
+        retryable:true,
+        importerVersion:'5.3'
       },429,{'retry-after':String(Math.max(10,error.retryAfter||10))});
     }
-    return jsonResponse({error:error.message||'Ошибка импорта.',importerVersion:'5.2'},400);
+    return jsonResponse({error:error.message||'Ошибка импорта.',importerVersion:'5.3'},400);
   }
 }
 
