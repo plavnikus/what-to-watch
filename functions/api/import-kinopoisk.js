@@ -1,4 +1,4 @@
-// Importer version: 5.1 — profile URL + sequential Cloudflare Browser Run /content
+// Importer version: 5.2 — profile URL + resilient Cloudflare Browser Run /content
 const JSON_HEADERS={
   'content-type':'application/json; charset=utf-8',
   'cache-control':'no-store',
@@ -94,17 +94,19 @@ function browserCredentials(env){
   return {accountId,token};
 }
 
-async function fetchBrowserHtml(url,env){
+async function fetchBrowserHtml(url,env,{waitForTimeout=0,waitUntil='networkidle2'}={}){
   const {accountId,token}=browserCredentials(env);
   const endpoint=`https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/browser-rendering/content`;
+  const payload={
+    url,
+    gotoOptions:{waitUntil,timeout:45000},
+    rejectResourceTypes:['image','media','font']
+  };
+  if(waitForTimeout>0)payload.waitForTimeout=waitForTimeout;
   const response=await fetch(endpoint,{
     method:'POST',
     headers:{authorization:`Bearer ${token}`,'content-type':'application/json'},
-    body:JSON.stringify({
-      url,
-      gotoOptions:{waitUntil:'networkidle2',timeout:45000},
-      rejectResourceTypes:['image','media','font']
-    })
+    body:JSON.stringify(payload)
   });
   const raw=await response.text();
   if(!response.ok){
@@ -125,6 +127,22 @@ async function fetchBrowserHtml(url,env){
   }catch{return raw;}
 }
 
+async function fetchParsedPage(pageUrl,env){
+  const attempts=[
+    {waitForTimeout:0,waitUntil:'networkidle2'},
+    {waitForTimeout:2000,waitUntil:'networkidle2'},
+    {waitForTimeout:3500,waitUntil:'networkidle0'}
+  ];
+  let html='';
+  let items=[];
+  for(let index=0;index<attempts.length;index++){
+    html=await fetchBrowserHtml(pageUrl,env,attempts[index]);
+    items=parseItems(html);
+    if(items.length)return {html,items,attempt:index+1};
+  }
+  return {html,items,attempt:attempts.length};
+}
+
 export async function onRequestPost(context){
   try{
     const body=await context.request.json().catch(()=>({}));
@@ -132,8 +150,9 @@ export async function onRequestPost(context){
     const page=Math.max(1,Math.floor(Number(body.page)||1));
     if(page>120)throw new Error('Номер страницы слишком большой.');
     const pageUrl=page===1?list.base:`${list.base}page/${page}/`;
-    const html=await fetchBrowserHtml(pageUrl,context.env);
-    const items=parseItems(html);
+    const rendered=await fetchParsedPage(pageUrl,context.env);
+    const html=rendered.html;
+    const items=rendered.items;
     const totalExpected=parseTotal(html);
     const totalPages=totalExpected?Math.max(1,Math.ceil(totalExpected/25)):null;
     if(!items.length){
@@ -141,11 +160,11 @@ export async function onRequestPost(context){
       const sample=text.slice(0,260);
       throw new Error(page===1
         ?`Страница открылась, но фильмы из «Буду смотреть» не распознаны.${sample?` Начало ответа: ${sample}`:''}`
-        :`На странице ${page} фильмы не распознаны. Импорт можно продолжить повторно.`);
+        :`Страница ${page} трижды загрузилась без фильмов. Прогресс сохранён — попробуйте продолжить позже.`);
     }
     return jsonResponse({
       source:'kinopoisk-browser-run-content',
-      importerVersion:'5.1',
+      importerVersion:'5.2',
       userId:list.userId,
       listType:list.listType,
       sourceType:list.sourceType,
@@ -154,6 +173,7 @@ export async function onRequestPost(context){
       totalExpected:totalExpected||null,
       totalPages,
       totalParsed:items.length,
+      renderAttempt:rendered.attempt,
       items
     });
   }catch(error){
@@ -161,10 +181,10 @@ export async function onRequestPost(context){
       return jsonResponse({
         error:'Cloudflare временно ограничил частоту запросов.',
         retryAfter:Math.max(10,error.retryAfter||10),
-        importerVersion:'5.1'
+        importerVersion:'5.2'
       },429,{'retry-after':String(Math.max(10,error.retryAfter||10))});
     }
-    return jsonResponse({error:error.message||'Ошибка импорта.',importerVersion:'5.1'},400);
+    return jsonResponse({error:error.message||'Ошибка импорта.',importerVersion:'5.2'},400);
   }
 }
 
