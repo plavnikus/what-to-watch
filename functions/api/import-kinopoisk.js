@@ -1,4 +1,4 @@
-// Importer version: 5.3 — profile URL + resilient Cloudflare Browser Run /content
+// Importer version: 5.4 — profile URL + rate-safe Cloudflare Browser Run /content
 const JSON_HEADERS={
   'content-type':'application/json; charset=utf-8',
   'cache-control':'no-store',
@@ -6,6 +6,7 @@ const JSON_HEADERS={
 };
 
 const WATCHLIST_TYPE='3575';
+const RETRY_DELAY_MS=11000;
 
 const decodeHtml=value=>String(value||'')
   .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,' ')
@@ -22,6 +23,8 @@ const decodeHtml=value=>String(value||'')
   .replace(/&#(\d+);/g,(_,code)=>String.fromCharCode(Number(code)))
   .replace(/\s+/g,' ')
   .trim();
+
+const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 
 function jsonResponse(data,status=200,extraHeaders={}){
   return new Response(JSON.stringify(data),{status,headers:{...JSON_HEADERS,...extraHeaders}});
@@ -133,19 +136,14 @@ async function fetchBrowserHtml(url,env,{waitForTimeout=0,waitUntil='networkidle
 }
 
 async function fetchParsedPage(pageUrl,env){
-  const attempts=[
-    {waitForTimeout:0,waitUntil:'networkidle2'},
-    {waitForTimeout:2000,waitUntil:'networkidle2'},
-    {waitForTimeout:3500,waitUntil:'networkidle0'}
-  ];
-  let html='';
-  let items=[];
-  for(let index=0;index<attempts.length;index++){
-    html=await fetchBrowserHtml(pageUrl,env,attempts[index]);
-    items=parseItems(html);
-    if(items.length)return {html,items,attempt:index+1};
-  }
-  return {html,items,attempt:attempts.length};
+  let html=await fetchBrowserHtml(pageUrl,env,{waitForTimeout:0,waitUntil:'networkidle2'});
+  let items=parseItems(html);
+  if(items.length)return {html,items,attempt:1};
+
+  await wait(RETRY_DELAY_MS);
+  html=await fetchBrowserHtml(pageUrl,env,{waitForTimeout:2000,waitUntil:'networkidle2'});
+  items=parseItems(html);
+  return {html,items,attempt:2};
 }
 
 export async function onRequestPost(context){
@@ -165,11 +163,11 @@ export async function onRequestPost(context){
       const sample=text.slice(0,260);
       throw new Error(page===1
         ?`Страница открылась, но фильмы из «Буду смотреть» не распознаны.${sample?` Начало ответа: ${sample}`:''}`
-        :`Страница ${page} трижды загрузилась без фильмов. Прогресс сохранён — попробуйте продолжить позже.`);
+        :`Страница ${page} дважды загрузилась без фильмов. Прогресс сохранён — попробуйте продолжить позже.`);
     }
     return jsonResponse({
       source:'kinopoisk-browser-run-content',
-      importerVersion:'5.3',
+      importerVersion:'5.4',
       userId:list.userId,
       listType:list.listType,
       sourceType:list.sourceType,
@@ -186,18 +184,18 @@ export async function onRequestPost(context){
       return jsonResponse({
         error:'Лимит Browser Run на сегодня исчерпан. Прогресс импорта сохранён — продолжите позже, и приложение начнёт с той же страницы.',
         retryable:false,
-        importerVersion:'5.3'
+        importerVersion:'5.4'
       },503);
     }
     if(error?.status===429){
       return jsonResponse({
         error:'Cloudflare временно ограничил частоту запросов.',
-        retryAfter:Math.max(10,error.retryAfter||10),
+        retryAfter:Math.max(11,error.retryAfter||11),
         retryable:true,
-        importerVersion:'5.3'
-      },429,{'retry-after':String(Math.max(10,error.retryAfter||10))});
+        importerVersion:'5.4'
+      },429,{'retry-after':String(Math.max(11,error.retryAfter||11))});
     }
-    return jsonResponse({error:error.message||'Ошибка импорта.',importerVersion:'5.3'},400);
+    return jsonResponse({error:error.message||'Ошибка импорта.',importerVersion:'5.4'},400);
   }
 }
 
