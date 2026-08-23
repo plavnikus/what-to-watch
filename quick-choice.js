@@ -9,8 +9,9 @@
 
   (async () => {
     try {
-      await load('/kinopoisk-import-onboarding-v1.js?v=pr16-3');
-      await load('/kinopoisk-import-visibility-fix-v1.js?v=pr16-3');
+      await load('/kinopoisk-import-onboarding-v1.js?v=pr16-4');
+      await load('/kinopoisk-import-finalize-v1.js?v=pr16-4');
+      await load('/kinopoisk-import-visibility-fix-v1.js?v=pr16-4');
 
       const originalSetImportLoading = window.setImportLoading;
       if (typeof originalSetImportLoading === 'function') {
