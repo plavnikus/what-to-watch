@@ -2,23 +2,13 @@
 
 ## VentKub Payments
 
-- Папка `shared-assets/ventkub-payments/` зарезервирована для публичных статических файлов мобильной формы оплат VentKub / Сибирь.
-- Утверждённая иконка iPhone Home Screen хранится как `shared-assets/ventkub-payments/icon-180.png`.
-- Постоянная PWA-оболочка мобильной формы хранится в `ventkub-payments/` и публикуется через Cloudflare Pages.
-- Основной пользовательский URL PWA: `https://what-to-watch-awy.pages.dev/ventkub-payments/`.
-- Папка `shared-assets/ventkub-payments/app/` с iframe-обёрткой считается устаревшим экспериментом: Google Apps Script вернул 401 внутри iframe, поэтому этот способ больше не использовать.
-- Прямую ссылку Apps Script не использовать как домашнюю iPhone-иконку: Google показывает служебный баннер и не даёт нормальный контроль над Home Screen icon.
-- Apps Script для PWA используется только как backend. Внешний интерфейс обращается к same-origin Cloudflare Pages Function `functions/api/ventkub-payments.js`, а та сервер-сервером вызывает Apps Script JSON API.
-- Доступ к PWA API привязывается к устройству через `functions/api/ventkub-pair.js`: одноразовый код проверяется по SHA-256, после чего устанавливается `HttpOnly; Secure; SameSite=Strict` cookie. Открытый код доступа не хранить в GitHub.
-- Cloudflare proxy передаёт код из защищённой cookie в Apps Script; Apps Script повторно проверяет SHA-256. Это защищает и внешний API, и прямой `doPost` Apps Script.
-- Для backend-версии Apps Script обязательны `doPost(e)`, `getMonthSnapshot(...)` и `savePayment(...)`. Не менять финансовую логику записи без отдельного согласования.
-- Не удалять, не перемещать и не переименовывать файлы PWA или иконку без одновременного обновления ссылок и service worker.
-- В публичный репозиторий нельзя добавлять ключи, токены, пароли и финансовые данные.
-- Перед постоянным производственным использованием провести реальную тестовую запись и проверить корректность всех полей в Google Sheets.
-- Если для отдельного сервиса появятся дополнительные публичные ассеты, создавать для него отдельную подпапку внутри `shared-assets/`.
+- В этом публичном репозитории больше не хранится и не публикуется рабочее приложение оплат, его API, pairing-endpoint или iframe-обёртка.
+- Устаревшие публичные файлы `functions/api/ventkub-pair.js`, `functions/api/ventkub-payments.js` и `shared-assets/ventkub-payments/app/` удалены и не должны восстанавливаться.
+- Единственный оставшийся публичный ассет — утверждённая иконка iPhone Home Screen: `shared-assets/ventkub-payments/icon-180.png`. Она пока используется рабочей PWA как статическое изображение.
+- Не добавлять сюда URL рабочего приложения, приватные пути входа, ключи, токены, пароли, финансовые данные или описание внутренних точек доступа.
+- Рабочая версия приложения хранится и развёртывается отдельно от `what-to-watch`; изменения этого репозитория не должны влиять на финансовую логику приложения.
+- Иконку нельзя удалять или переименовывать, пока рабочая PWA явно не переведена на собственную копию изображения и это не проверено на iPhone.
+- Любые будущие публичные ассеты других сервисов размещать в отдельных подпапках `shared-assets/` и не смешивать с кодом финансовых приложений.
 
-Текущий URL иконки:
+Текущий публичный URL иконки:
 `https://raw.githubusercontent.com/plavnikus/what-to-watch/main/shared-assets/ventkub-payments/icon-180.png`
-
-Текущий URL PWA:
-`https://what-to-watch-awy.pages.dev/ventkub-payments/`
