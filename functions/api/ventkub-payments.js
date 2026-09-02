@@ -1,4 +1,5 @@
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbzoWuSLeDZAajNg13ZBH-R30Zv1LVFehYUaqH9lJBuSMpiFC7jm0k8kSucLiuv9AL04/exec';
+const TOKEN_SHA256 = '190dd78d4f04de20ebc37b272bf5556fc8f4d2a79d0d73a3cde42d85751685d3';
 
 const HEADERS = {
   'content-type': 'application/json; charset=utf-8',
@@ -10,6 +11,12 @@ const json = (body, status = 200) => new Response(JSON.stringify(body), {
   status,
   headers: HEADERS
 });
+
+async function sha256Hex(value) {
+  const bytes = new TextEncoder().encode(String(value || ''));
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  return [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, '0')).join('');
+}
 
 export async function onRequestPost(context) {
   try {
@@ -24,6 +31,10 @@ export async function onRequestPost(context) {
     const body = await request.json().catch(() => null);
     if (!body || !['getMonthSnapshot','savePayment'].includes(body.action)) {
       return json({ ok:false, error:'Некорректная команда API.' }, 400);
+    }
+
+    if (await sha256Hex(body.token) !== TOKEN_SHA256) {
+      return json({ ok:false, error:'Неверный код доступа.' }, 401);
     }
 
     const upstream = await fetch(GAS_URL, {
