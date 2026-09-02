@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Оплаты">
+  <link rel="apple-touch-icon" sizes="180x180" href="/shared-assets/ventkub-payments/icon-180.png">
+  <link rel="manifest" href="/ventkub-payments/manifest.webmanifest">
+  <title>Оплаты • ВентКуб</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="theme-color" content="#f4f7fb">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+  <link rel="stylesheet" href="/ventkub-payments/app.css?v=1">
+</head>
+<body data-ui-version="1.16-pwa">
+
+  <div class="app">
+    <div class="sticky-head">
+      <div class="title-row">
+        <div class="title">&#x41E;&#x43F;&#x43B;&#x430;&#x442;&#x44B; &#x2022; &#x412;&#x435;&#x43D;&#x442;&#x41A;&#x443;&#x431;</div>
+        <div class="sheet-badge" id="sheetBadge">&#x2014;</div>
+      </div>
+      <div class="company-toggle" aria-label="&#x41A;&#x43E;&#x43C;&#x43F;&#x430;&#x43D;&#x438;&#x44F;">
+        <button type="button" id="companyVentKub" class="company-btn ventkub" onclick="selectCompany('\u0412\u0435\u043D\u0442\u041A\u0443\u0431')">&#x412;&#x435;&#x43D;&#x442;&#x41A;&#x443;&#x431;</button>
+        <button type="button" id="companySiberia" class="company-btn siberia" onclick="selectCompany('\u0421\u0438\u0431\u0438\u0440\u044C')">&#x421;&#x438;&#x431;&#x438;&#x440;&#x44C;</button>
+      </div>
+      <div id="loadingLine" class="loading-line"></div>
+    </div>
+
+    <main class="content">
+      <div id="status" class="status"></div>
+
+      <section class="card">
+        <div class="date-buttons">
+          <button type="button" id="dateToday" class="date-btn" onclick="selectQuickDate('today')">&#x421;&#x435;&#x433;&#x43E;&#x434;&#x43D;&#x44F;</button>
+          <button type="button" id="dateYesterday" class="date-btn" onclick="selectQuickDate('yesterday')">&#x412;&#x447;&#x435;&#x440;&#x430;</button>
+          <button type="button" id="dateOther" class="date-btn" onclick="selectQuickDate('other')">&#x414;&#x440;&#x443;&#x433;&#x430;&#x44F;</button>
+        </div>
+        <input id="otherDate" class="date-input hidden" type="date" onchange="onOtherDateChanged()">
+        <div class="date-summary">&#x1F4C5; <span id="dateSummary">&#x2014;</span></div>
+      </section>
+
+      <section class="card">
+        <div class="field">
+          <label>&#x41C;&#x435;&#x442;&#x43A;&#x430;</label>
+          <div class="quick-grid" id="labelQuickButtons">
+            <button type="button" id="labelIncome" class="quick-btn income" onclick="setLabel('\u0434')" aria-label="&#x414;&#x43E;&#x445;&#x43E;&#x434;" title="&#x414;&#x43E;&#x445;&#x43E;&#x434;">
+              <svg viewBox="0 0 36 36" aria-hidden="true">
+                <path d="M7 10.5h15.8a3 3 0 0 1 3 3v10.2a3 3 0 0 1-3 3H7.8a3.6 3.6 0 0 1-3.6-3.6V11.7A4.7 4.7 0 0 1 8.9 7h12.2" class="icon-stroke"/>
+                <path d="M4.7 12.8h18.1" class="icon-stroke"/>
+                <circle cx="26.3" cy="24.8" r="6.1" fill="#fff" stroke="currentColor" stroke-width="2"/>
+                <path d="M26.3 21.4v6.8M22.9 24.8h6.8" class="icon-stroke-strong"/>
+              </svg>
+            </button>
+            <button type="button" id="labelExpense" class="quick-btn expense" onclick="setLabel('\u0440')" aria-label="&#x420;&#x430;&#x441;&#x445;&#x43E;&#x434;" title="&#x420;&#x430;&#x441;&#x445;&#x43E;&#x434;">
+              <svg viewBox="0 0 36 36" aria-hidden="true">
+                <path d="M7 10.5h15.8a3 3 0 0 1 3 3v10.2a3 3 0 0 1-3 3H7.8a3.6 3.6 0 0 1-3.6-3.6V11.7A4.7 4.7 0 0 1 8.9 7h12.2" class="icon-stroke"/>
+                <path d="M4.7 12.8h18.1" class="icon-stroke"/>
+                <circle cx="26.3" cy="24.8" r="6.1" fill="#fff" stroke="currentColor" stroke-width="2"/>
+                <path d="M22.8 24.8h7" class="icon-stroke-strong"/>
+              </svg>
+            </button>
+            <button type="button" id="labelSafe" class="quick-btn safe" onclick="setLabel('\u0440 \u0441\u0435\u0439\u0444')" aria-label="&#x420;-&#x441;&#x435;&#x439;&#x444;" title="&#x418;&#x437; &#x441;&#x435;&#x439;&#x444;&#x430; &#x43D;&#x430; &#x43E;&#x441;&#x43D;&#x43E;&#x432;&#x43D;&#x43E;&#x439; &#x441;&#x447;&#x451;&#x442;">
+              <svg viewBox="0 0 40 36" aria-hidden="true">
+                <rect x="5.5" y="5.8" width="20" height="23.5" rx="3.2" class="icon-stroke"/>
+                <path d="M8.7 9.2h13.6v16.3H8.7z" class="icon-stroke"/>
+                <circle cx="15.5" cy="17.4" r="3.5" class="icon-stroke"/>
+                <circle cx="15.5" cy="17.4" r=".9" fill="currentColor"/>
+                <path d="M15.5 13.9v2.2M15.5 18.7v2.2M12 17.4h2.2M16.8 17.4H19M9.5 29.3v2M21.5 29.3v2M28.3 17.5h7M32.2 13.9l3.6 3.6-3.6 3.6" class="icon-stroke"/>
+              </svg>
+            </button>
+            <button type="button" id="labelS" class="quick-btn smark" onclick="setLabel('\u0441')" aria-label="&#x41C;&#x435;&#x442;&#x43A;&#x430; &#x421;" title="&#x421;">
+              <svg viewBox="0 0 36 36" aria-hidden="true">
+                <circle cx="18" cy="18" r="11" class="icon-stroke"/>
+                <path d="M22.5 13.8a6.1 6.1 0 1 0 0 8.4" class="icon-stroke-strong"/>
+              </svg>
+            </button>
+            <button type="button" id="labelMore" class="quick-btn more" onclick="openPicker('label')" aria-label="&#x415;&#x449;&#x451; &#x43C;&#x435;&#x442;&#x43A;&#x438;" title="&#x415;&#x449;&#x451;">
+              <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="7" cy="16" r="2.3" fill="currentColor"/><circle cx="16" cy="16" r="2.3" fill="currentColor"/><circle cx="25" cy="16" r="2.3" fill="currentColor"/></svg>
+            </button>
+          </div>
+          <div id="labelCustomValue" class="selected-custom hidden"></div>
+        </div>
+
+        <div class="field">
+          <label for="amountInput">&#x421;&#x443;&#x43C;&#x43C;&#x430;</label>
+          <div class="amount-wrap"><input id="amountInput" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" placeholder="0"><span class="amount-ruble">&#x20BD;</span></div>
+        </div>
+
+        <div class="field">
+          <label>&#x421;&#x43F;&#x43E;&#x441;&#x43E;&#x431; &#x43E;&#x43F;&#x43B;&#x430;&#x442;&#x44B;</label>
+          <div id="methodButtons" class="method-buttons"></div>
+        </div>
+
+        <div class="field">
+          <label for="descriptionInput">&#x41E;&#x43F;&#x438;&#x441;&#x430;&#x43D;&#x438;&#x435; / &#x43D;&#x430;&#x437;&#x43D;&#x430;&#x447;&#x435;&#x43D;&#x438;&#x435;</label>
+          <input id="descriptionInput" type="text" autocomplete="off" enterkeyhint="next" placeholder="&#x41C;&#x43E;&#x436;&#x43D;&#x43E; &#x43E;&#x441;&#x442;&#x430;&#x432;&#x438;&#x442;&#x44C; &#x43F;&#x443;&#x441;&#x442;&#x44B;&#x43C;">
+        </div>
+
+        <div class="field">
+          <label>&#x422;&#x438;&#x43F; &#x440;&#x430;&#x441;&#x445;&#x43E;&#x434;&#x430;</label>
+          <div class="quick-grid" id="expenseQuickButtons">
+            <button type="button" id="expenseQr" class="quick-btn type-btn" onclick="setExpenseType('QR-\u043a\u043e\u0434')" aria-label="QR-&#x43A;&#x43E;&#x434;" title="QR-&#x43A;&#x43E;&#x434;">
+              <svg viewBox="0 0 36 36" aria-hidden="true">
+                <path class="icon-qr" fill-rule="evenodd" d="M5 5h11v11H5V5zm3 3v5h5V8H8zm12-3h11v11H20V5zm3 3v5h5V8h-5zM5 20h11v11H5V20zm3 3v5h5v-5H8zm12-3h4v4h-4v-4zm6 0h5v4h-5v-4zm-6 6h4v5h-4v-5zm6 0h2v2h-2v-2zm3 3h2v2h-2v-2z"/>
+              </svg>
+            </button>
+            <button type="button" id="expensePersonal" class="quick-btn type-btn" onclick="setExpenseType('\u041b\u0438\u0447\u043d\u043e\u0435')" aria-label="&#x41B;&#x438;&#x447;&#x43D;&#x43E;&#x435;" title="&#x41B;&#x438;&#x447;&#x43D;&#x43E;&#x435;">
+              <svg viewBox="0 0 36 36" aria-hidden="true">
+                <circle cx="18" cy="12" r="5" class="icon-person"/>
+                <path d="M8.5 29c.9-7 4.5-10.5 9.5-10.5S26.6 22 27.5 29H8.5z" class="icon-person"/>
+              </svg>
+            </button>
+            <button type="button" id="expenseTaxi" class="quick-btn type-btn" onclick="setExpenseType('\u0422\u0430\u043a\u0441\u0438')" aria-label="&#x422;&#x430;&#x43A;&#x441;&#x438;" title="&#x422;&#x430;&#x43A;&#x441;&#x438;">
+              <svg viewBox="0 0 46 36" aria-hidden="true">
+                <rect x="20" y="5.1" width="7.8" height="2.8" rx="1" class="icon-taxi-body"/>
+                <path d="M8.1 19.1l4.4-2 4.1-6.1c.5-.8 1.4-1.3 2.4-1.3h10c1 0 1.9.5 2.4 1.3l3.7 5.7 4 1.2c1.2.4 2 1.5 2 2.7v3.1c0 1.3-1.1 2.4-2.4 2.4h-3.2a3.5 3.5 0 0 0-6.9 0H17.2a3.5 3.5 0 0 0-6.9 0H7.5a2.5 2.5 0 0 1-2.5-2.5v-1.9c0-1.1.6-2.1 1.6-2.5l1.5-.1z" class="icon-taxi-body"/>
+                <path d="M17.4 11.2h11.1c.7 0 1.3.3 1.7.9l3 4.5H14.4l3-4.5z" class="icon-taxi-window"/>
+                <path d="M18.8 15.5h2v1.7h-2zm3.3 0h2v1.7h-2zm3.3 0h2v1.7h-2zm3.3 0h2v1.7h-2" fill="#8a6b16"/>
+                <circle cx="13.7" cy="26" r="2.55" class="icon-taxi-dark"/>
+                <circle cx="32.1" cy="26" r="2.55" class="icon-taxi-dark"/>
+              </svg>
+            </button>
+            <button type="button" id="expenseTk" class="quick-btn type-btn" onclick="setExpenseType('\u0422\u041a')" aria-label="&#x422;&#x440;&#x430;&#x43D;&#x441;&#x43F;&#x43E;&#x440;&#x442;&#x43D;&#x430;&#x44F; &#x43A;&#x43E;&#x43C;&#x43F;&#x430;&#x43D;&#x438;&#x44F;" title="&#x422;&#x41A;">
+              <svg viewBox="0 0 44 36" aria-hidden="true">
+                <rect x="5.5" y="9.5" width="20" height="14.5" rx="2.3" class="icon-truck"/>
+                <path d="M25.5 13.5h6.2l6 6v4.5H25.5V13.5zM31.7 14v5.5h5.5" class="icon-truck"/>
+                <circle cx="13" cy="26" r="2.8" class="icon-truck"/><circle cx="31.5" cy="26" r="2.8" class="icon-truck"/>
+              </svg>
+            </button>
+            <button type="button" id="expenseMore" class="quick-btn more" onclick="openPicker('expense')" aria-label="&#x415;&#x449;&#x451; &#x442;&#x438;&#x43F;&#x44B; &#x440;&#x430;&#x441;&#x445;&#x43E;&#x434;&#x430;" title="&#x415;&#x449;&#x451;">
+              <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="7" cy="16" r="2.3" fill="currentColor"/><circle cx="16" cy="16" r="2.3" fill="currentColor"/><circle cx="25" cy="16" r="2.3" fill="currentColor"/></svg>
+            </button>
+          </div>
+          <div id="expenseCustomValue" class="selected-custom hidden"></div>
+        </div>
+
+        <div class="field">
+          <label for="commentInput">&#x41A;&#x43E;&#x43C;&#x43C;&#x435;&#x43D;&#x442;&#x430;&#x440;&#x438;&#x439;</label>
+          <textarea id="commentInput" placeholder="&#x41D;&#x435;&#x43E;&#x431;&#x44F;&#x437;&#x430;&#x442;&#x435;&#x43B;&#x44C;&#x43D;&#x43E;"></textarea>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="recent-head"><div class="recent-title">&#x41F;&#x43E;&#x441;&#x43B;&#x435;&#x434;&#x43D;&#x438;&#x435; &#x437;&#x430;&#x43F;&#x438;&#x441;&#x438;</div><button type="button" class="open-sheet" onclick="openSpreadsheet()">&#x41E;&#x442;&#x43A;&#x440;&#x44B;&#x442;&#x44C; &#x442;&#x430;&#x431;&#x43B;&#x438;&#x446;&#x443; &#x2197;</button></div>
+        <div id="recentList"><div class="recent-empty">&#x421;&#x438;&#x43D;&#x445;&#x440;&#x43E;&#x43D;&#x438;&#x437;&#x430;&#x446;&#x438;&#x44F; &#x432; &#x444;&#x43E;&#x43D;&#x435;&#x2026;</div></div>
+      </section>
+    </main>
+  </div>
+
+  <div class="save-bar"><div class="save-inner"><button id="saveButton" class="save-btn ventkub" type="button" onclick="savePayment()"><span id="saveButtonLabel">&#x414;&#x43E;&#x431;&#x430;&#x432;&#x438;&#x442;&#x44C; &#x43E;&#x43F;&#x43B;&#x430;&#x442;&#x443;</span><span id="saveCompany" class="save-company">&#x432; &#x412;&#x435;&#x43D;&#x442;&#x41A;&#x443;&#x431;</span></button></div></div>
+
+  <div id="pickerOverlay" class="picker-overlay hidden" onclick="pickerBackdrop(event)">
+    <div class="picker-sheet" role="dialog" aria-modal="true">
+      <div class="picker-head"><div id="pickerTitle" class="picker-title"></div><button type="button" class="picker-close" onclick="closePicker()" aria-label="&#x417;&#x430;&#x43A;&#x440;&#x44B;&#x442;&#x44C;">&#xD7;</button></div>
+      <div id="pickerList" class="picker-list"></div>
+    </div>
+  </div>
+<script src="/ventkub-payments/app.js?v=1"></script>
+</body>
+</html>
