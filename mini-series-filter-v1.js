@@ -3,6 +3,7 @@
 
   let loading = false;
   let ready = false;
+  const REQUEST_TIMEOUT_MS = 18000;
 
   const applyMiniIds = ids => {
     const set = new Set((Array.isArray(ids) ? ids : []).map(String));
@@ -42,12 +43,16 @@
     }
     if (preview) preview.textContent = '…';
 
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
     try {
       const response = await fetch('/api/user-miniseries', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: '{}',
-        cache: 'no-store'
+        cache: 'no-store',
+        signal: controller.signal
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || 'Не удалось определить мини-сериалы.');
@@ -56,9 +61,13 @@
       ready = true;
       return true;
     } catch (error) {
-      if (typeof showToast === 'function') showToast(error.message || 'Не удалось определить мини-сериалы.');
+      const message = error?.name === 'AbortError'
+        ? 'Определение заняло слишком много времени. Попробуйте ещё раз позже.'
+        : (error.message || 'Не удалось определить мини-сериалы.');
+      if (typeof showToast === 'function') showToast(message);
       return false;
     } finally {
+      clearTimeout(timer);
       loading = false;
       if (button) {
         button.disabled = false;
