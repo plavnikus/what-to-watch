@@ -9,6 +9,7 @@ const JSON_HEADERS = {
 const ACTIVE_STATUSES = new Set(['announced', 'filming', 'pre-production', 'post-production']);
 const PROVIDER_BATCH_SIZE = 40;
 const PROVIDER_LIMIT = 250;
+const MAX_MINISERIES_EPISODES = 10;
 
 const json = (body, status = 200) => new Response(JSON.stringify(body), {
   status,
@@ -35,7 +36,7 @@ const fetchJson = async (url, token) => {
   return response.json();
 };
 
-const readLibraryIds = async (db, userId, type) => {
+const readLibraryIdsByType = async (db, userId, type) => {
   const result = await db.prepare(`
     SELECT m.kinopoisk_id
     FROM user_movies um
@@ -64,8 +65,26 @@ const fetchStatuses = async (ids, token) => {
   return map;
 };
 
-const fetchSeasonCounts = async (ids, token) => {
-  const counts = new Map(ids.map(id => [String(id), new Set()]));
+const episodeCount = season => {
+  if (Array.isArray(season?.episodes)) {
+    const numbered = new Set(
+      season.episodes
+        .map(episode => Number(episode?.number))
+        .filter(number => Number.isInteger(number) && number > 0)
+    );
+    return numbered.size || season.episodes.length;
+  }
+
+  for (const value of [season?.episodesCount, season?.episodeCount]) {
+    const number = Number(value);
+    if (Number.isInteger(number) && number > 0) return number;
+  }
+
+  return 0;
+};
+
+const fetchSeasonStats = async (ids, token) => {
+  const stats = new Map(ids.map(id => [String(id), new Map()]));
   let page = 1;
   let totalPages = 1;
 
@@ -74,23 +93,32 @@ const fetchSeasonCounts = async (ids, token) => {
     url.searchParams.set('page', String(page));
     url.searchParams.set('limit', String(PROVIDER_LIMIT));
     ids.forEach(id => url.searchParams.append('movieId', String(id)));
-    url.searchParams.append('selectFields', 'movieId');
-    url.searchParams.append('selectFields', 'number');
 
     const data = await fetchJson(url.toString(), token);
     const docs = Array.isArray(data?.docs) ? data.docs : [];
     for (const season of docs) {
       const movieId = season?.movieId == null ? '' : String(season.movieId);
       const number = Number(season?.number);
-      if (!counts.has(movieId) || !Number.isInteger(number) || number <= 0) continue;
-      counts.get(movieId).add(number);
+      if (!stats.has(movieId) || !Number.isInteger(number) || number <= 0) continue;
+      stats.get(movieId).set(number, episodeCount(season));
     }
 
     totalPages = Math.max(1, Number(data?.pages) || 1);
     page += 1;
   } while (page <= totalPages && page <= 20);
 
-  return counts;
+  return stats;
+};
+
+const updateTypes = async (db, ids, type, currentType) => {
+  for (let offset = 0; offset < ids.length; offset += 100) {
+    const batch = ids.slice(offset, offset + 100);
+    await db.batch(batch.map(id => db.prepare(`
+      UPDATE movies
+      SET type = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE kinopoisk_id = ? AND type = ?
+    `).bind(type, Number(id), currentType)));
+  }
 };
 
 export async function onRequestPost(context) {
@@ -101,55 +129,73 @@ export async function onRequestPost(context) {
     const session = await verifyTelegramSession(context.request, context.env.TELEGRAM_BOT_TOKEN);
     if (!session.ok) return json({ error: 'Нужен вход через Telegram.' }, 401);
 
-    const existingMiniIds = await readLibraryIds(db, session.userId, 'mini');
-    const seriesIds = await readLibraryIds(db, session.userId, 'series');
-    if (!seriesIds.length) {
-      return json({ ok: true, miniIds: existingMiniIds, checked: 0, classified: 0, seasonRecords: 0 });
+    const existingMiniIds = await readLibraryIdsByType(db, session.userId, 'mini');
+    const seriesIds = await readLibraryIdsByType(db, session.userId, 'series');
+    const candidateIds = [...new Set([...seriesIds, ...existingMiniIds])];
+
+    if (!candidateIds.length) {
+      return json({
+        ok: true,
+        miniIds: [],
+        checked: 0,
+        classified: 0,
+        reverted: 0,
+        seasonRecords: 0,
+        episodeRecords: 0
+      });
     }
 
     const token = String(context.env.POISKKINO_API_TOKEN || '').trim();
     if (!token) return json({ error: 'Не настроен источник данных для определения мини-сериалов.' }, 503);
 
-    const miniIds = new Set(existingMiniIds);
+    const qualifiedMiniIds = new Set();
     let checked = 0;
     let seasonRecords = 0;
+    let episodeRecords = 0;
 
-    for (let offset = 0; offset < seriesIds.length; offset += PROVIDER_BATCH_SIZE) {
-      const batch = seriesIds.slice(offset, offset + PROVIDER_BATCH_SIZE);
-      const [statuses, seasonCounts] = await Promise.all([
+    for (let offset = 0; offset < candidateIds.length; offset += PROVIDER_BATCH_SIZE) {
+      const batch = candidateIds.slice(offset, offset + PROVIDER_BATCH_SIZE);
+      const [statuses, seasonStats] = await Promise.all([
         fetchStatuses(batch, token),
-        fetchSeasonCounts(batch, token)
+        fetchSeasonStats(batch, token)
       ]);
 
       checked += batch.length;
+
       for (const id of batch) {
-        const seasons = seasonCounts.get(String(id)) || new Set();
+        const seasons = seasonStats.get(String(id)) || new Map();
         seasonRecords += seasons.size;
+        const episodeCounts = [...seasons.values()];
+        episodeRecords += episodeCounts.reduce((sum, count) => sum + count, 0);
+
         const status = statuses.get(String(id)) || '';
-        if (seasons.size === 1 && !ACTIVE_STATUSES.has(status)) {
-          miniIds.add(String(id));
+        const hasOneSeason = seasons.size === 1;
+        const episodes = hasOneSeason ? episodeCounts[0] || 0 : 0;
+        const shortEnough = episodes > 0 && episodes <= MAX_MINISERIES_EPISODES;
+
+        if (hasOneSeason && shortEnough && !ACTIVE_STATUSES.has(status)) {
+          qualifiedMiniIds.add(String(id));
         }
       }
     }
 
-    const existingSet = new Set(existingMiniIds);
-    const newlyClassified = [...miniIds].filter(id => !existingSet.has(id));
-    for (let offset = 0; offset < newlyClassified.length; offset += 100) {
-      const batch = newlyClassified.slice(offset, offset + 100);
-      await db.batch(batch.map(id => db.prepare(`
-        UPDATE movies
-        SET type = 'mini', updated_at = CURRENT_TIMESTAMP
-        WHERE kinopoisk_id = ? AND type = 'series'
-      `).bind(Number(id))));
-    }
+    const existingMiniSet = new Set(existingMiniIds);
+    const newlyClassified = [...qualifiedMiniIds].filter(id => !existingMiniSet.has(id));
+    const reverted = existingMiniIds.filter(id => !qualifiedMiniIds.has(id));
+
+    await updateTypes(db, newlyClassified, 'mini', 'series');
+    await updateTypes(db, reverted, 'series', 'mini');
 
     return json({
       ok: true,
-      miniIds: [...miniIds],
+      miniIds: [...qualifiedMiniIds],
       checked,
       classified: newlyClassified.length,
+      reverted: reverted.length,
       seasonRecords,
-      rule: 'one-season-not-active-production',
+      episodeRecords,
+      maxEpisodes: MAX_MINISERIES_EPISODES,
+      rule: 'one-season-up-to-10-episodes-not-active-production',
       source: 'poiskkino-season-endpoint'
     });
   } catch (error) {
