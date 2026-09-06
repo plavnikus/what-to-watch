@@ -11,6 +11,13 @@ const json = (body, status = 200) => new Response(JSON.stringify(body), {
   headers: JSON_HEADERS
 });
 
+const ACTIVE_PRODUCTION_STATUSES = new Set([
+  'announced',
+  'filming',
+  'pre-production',
+  'post-production'
+]);
+
 const positiveSeasonNumbers = value => {
   const seasons = Array.isArray(value) ? value : [];
   return [...new Set(
@@ -23,9 +30,14 @@ const positiveSeasonNumbers = value => {
 const isMiniSeries = item => {
   const type = String(item?.type || '').toLowerCase();
   const status = String(item?.status || '').toLowerCase();
+  const seasonNumbers = positiveSeasonNumbers(item?.seasonsInfo);
+
+  // PoiskKino exposes limited series as tv-series rather than a separate mini-series type.
+  // For MVP we treat a tv-series with exactly one regular season as a mini-series unless
+  // the provider explicitly says it is still in active production.
   return type === 'tv-series'
-    && status === 'completed'
-    && positiveSeasonNumbers(item?.seasonsInfo).length === 1;
+    && seasonNumbers.length === 1
+    && !ACTIVE_PRODUCTION_STATUSES.has(status);
 };
 
 const fetchProviderBatch = async (ids, token) => {
@@ -87,17 +99,31 @@ export async function onRequestPost(context) {
 
     const miniIds = new Set(existingMiniIds);
     let checked = 0;
+    let returned = 0;
+    let singleSeasonCandidates = 0;
+    let activeExcluded = 0;
 
-    for (let offset = 0; offset < seriesIds.length; offset += 200) {
-      const batch = seriesIds.slice(offset, offset + 200);
+    for (let offset = 0; offset < seriesIds.length; offset += 150) {
+      const batch = seriesIds.slice(offset, offset + 150);
       const docs = await fetchProviderBatch(batch, token);
       checked += batch.length;
+      returned += docs.length;
+
       for (const item of docs) {
+        const seasonNumbers = positiveSeasonNumbers(item?.seasonsInfo);
+        if (String(item?.type || '').toLowerCase() === 'tv-series' && seasonNumbers.length === 1) {
+          singleSeasonCandidates++;
+          if (ACTIVE_PRODUCTION_STATUSES.has(String(item?.status || '').toLowerCase())) {
+            activeExcluded++;
+            continue;
+          }
+        }
         if (isMiniSeries(item) && item?.id != null) miniIds.add(String(item.id));
       }
     }
 
-    const newlyClassified = [...miniIds].filter(id => !existingMiniIds.includes(id));
+    const existingSet = new Set(existingMiniIds);
+    const newlyClassified = [...miniIds].filter(id => !existingSet.has(id));
     for (let offset = 0; offset < newlyClassified.length; offset += 100) {
       const batch = newlyClassified.slice(offset, offset + 100);
       await db.batch(batch.map(id => db.prepare(`
@@ -111,8 +137,11 @@ export async function onRequestPost(context) {
       ok: true,
       miniIds: [...miniIds],
       checked,
+      returned,
       classified: newlyClassified.length,
-      rule: 'completed-single-season'
+      singleSeasonCandidates,
+      activeExcluded,
+      rule: 'single-season-not-active-production'
     });
   } catch (error) {
     return json({ error: error?.message || 'Не удалось определить мини-сериалы.' }, 500);
