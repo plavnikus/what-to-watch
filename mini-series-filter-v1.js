@@ -1,9 +1,9 @@
 (() => {
   if (typeof movies === 'undefined') return;
 
-  const RULE_VERSION = 'mini-v3-1season-10episodes';
+  const RULE_VERSION = 'mini-v4-season-episodes-count';
   const RULE_STORAGE_KEY = 'movieAppMiniSeriesRuleVersion';
-  const REQUEST_TIMEOUT_MS = 12000;
+  const REQUEST_TIMEOUT_MS = 15000;
 
   let loading = false;
   let ready = false;
