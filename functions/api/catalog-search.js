@@ -14,6 +14,17 @@ const parseJsonArray = value => {
     return [];
   }
 };
+const normalizeGenres = values => {
+  const seen = new Set();
+  const result = [];
+  for (const value of Array.isArray(values) ? values : []) {
+    const genre = String(value || '').trim().replace(/\s+/g, ' ').toLocaleLowerCase('ru-RU');
+    if (!genre || seen.has(genre)) continue;
+    seen.add(genre);
+    result.push(genre);
+  }
+  return result;
+};
 const formatDuration = minutes => {
   const value = asNumber(minutes);
   if (!value || value <= 0) return '';
@@ -30,7 +41,7 @@ const normalize = row => {
     originalTitle: String(row.original_title || ''),
     year: asNumber(row.year),
     type: String(row.type || 'film'),
-    genres: parseJsonArray(row.genres_json),
+    genres: normalizeGenres(parseJsonArray(row.genres_json)),
     countries: parseJsonArray(row.countries_json),
     desc: String(row.description || row.short_description || ''),
     shortDescription: String(row.short_description || ''),
@@ -59,6 +70,7 @@ const presetSql = (preset, currentYear) => {
     case 'comedy': return { where: `${base} AND genres_json LIKE ?`, binds: ['%"комедия"%'], order: 'rating_kp DESC, year DESC' };
     case 'thriller': return { where: `${base} AND genres_json LIKE ?`, binds: ['%"триллер"%'], order: 'rating_kp DESC, year DESC' };
     case 'horror': return { where: `${base} AND genres_json LIKE ?`, binds: ['%"ужасы"%'], order: 'rating_kp DESC, year DESC' };
+    case 'mini': return { where: `${base} AND type = ?`, binds: ['mini'], order: 'rating_kp DESC, year DESC' };
     case 'rating7': return { where: `${base} AND rating_kp >= 7`, binds: [], order: 'rating_kp DESC, year DESC' };
     case 'short': return { where: `${base} AND duration_minutes > 0 AND duration_minutes <= 120`, binds: [], order: 'rating_kp DESC, year DESC' };
     case 'new': return { where: `${base} AND year >= ?`, binds: [currentYear - 1], order: 'year DESC, rating_kp DESC' };
