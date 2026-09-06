@@ -2,15 +2,19 @@
   if (typeof movies === 'undefined') return;
 
   let loading = false;
-  let ready = movies.some(movie => movie.type === 'mini' && states?.[movie.id]?.status && states[movie.id].status !== 'none');
+  let ready = false;
 
   const applyMiniIds = ids => {
     const set = new Set((Array.isArray(ids) ? ids : []).map(String));
-    if (!set.size) return;
 
     const update = movie => {
       if (!movie?.kinopoiskId) return;
-      if (set.has(String(movie.kinopoiskId))) movie.type = 'mini';
+      const id = String(movie.kinopoiskId);
+      if (set.has(id)) {
+        movie.type = 'mini';
+      } else if (movie.type === 'mini') {
+        movie.type = 'series';
+      }
     };
 
     movies.forEach(update);
