@@ -14,6 +14,8 @@
       await load('/kinopoisk-import-visibility-fix-v1.js?v=pr16-5');
       await load('/kinopoisk-import-paste-v1.js?v=pr16-5');
       await load('/library-quality-v1.js?v=pr16-6');
+      await load('/genre-presentation-v1.js?v=pr16-7');
+      await load('/scroll-top-v1.js?v=pr16-7');
 
       const originalSetImportLoading = window.setImportLoading;
       if (typeof originalSetImportLoading === 'function') {
@@ -29,7 +31,7 @@
 
     try {
       await load('/quick-choice-v2.js?v=pr15-final');
-      await load('/quick-choice-genre-labels-v1.js?v=pr15-final');
+      await load('/quick-choice-genre-labels-v1.js?v=pr16-7');
       await load('/quick-choice-restart-v1.js?v=pr15-final');
     } catch (error) {
       console.error('Quick choice failed to load', error);
