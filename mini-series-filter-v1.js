@@ -1,9 +1,15 @@
 (() => {
   if (typeof movies === 'undefined') return;
 
+  const RULE_VERSION = 'mini-v3-1season-10episodes';
+  const RULE_STORAGE_KEY = 'movieAppMiniSeriesRuleVersion';
+  const REQUEST_TIMEOUT_MS = 12000;
+
   let loading = false;
   let ready = false;
-  const REQUEST_TIMEOUT_MS = 18000;
+  try {
+    ready = localStorage.getItem(RULE_STORAGE_KEY) === RULE_VERSION;
+  } catch {}
 
   const applyMiniIds = ids => {
     const set = new Set((Array.isArray(ids) ? ids : []).map(String));
@@ -59,10 +65,11 @@
 
       applyMiniIds(data.miniIds);
       ready = true;
+      try { localStorage.setItem(RULE_STORAGE_KEY, RULE_VERSION); } catch {}
       return true;
     } catch (error) {
       const message = error?.name === 'AbortError'
-        ? 'Определение заняло слишком много времени. Попробуйте ещё раз позже.'
+        ? 'Не удалось быстро определить мини-сериалы. Попробуйте ещё раз позже.'
         : (error.message || 'Не удалось определить мини-сериалы.');
       if (typeof showToast === 'function') showToast(message);
       return false;
