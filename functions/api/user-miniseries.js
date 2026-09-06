@@ -6,48 +6,17 @@ const JSON_HEADERS = {
   'x-content-type-options': 'nosniff'
 };
 
+const ACTIVE_STATUSES = new Set(['announced', 'filming', 'pre-production', 'post-production']);
+const PROVIDER_BATCH_SIZE = 40;
+const PROVIDER_LIMIT = 250;
+
 const json = (body, status = 200) => new Response(JSON.stringify(body), {
   status,
   headers: JSON_HEADERS
 });
 
-const ACTIVE_PRODUCTION_STATUSES = new Set([
-  'announced',
-  'filming',
-  'pre-production',
-  'post-production'
-]);
-
-const positiveSeasonNumbers = value => {
-  const seasons = Array.isArray(value) ? value : [];
-  return [...new Set(
-    seasons
-      .map(item => Number(item?.number))
-      .filter(number => Number.isInteger(number) && number > 0)
-  )];
-};
-
-const isMiniSeries = item => {
-  const type = String(item?.type || '').toLowerCase();
-  const status = String(item?.status || '').toLowerCase();
-  const seasonNumbers = positiveSeasonNumbers(item?.seasonsInfo);
-
-  // PoiskKino exposes limited series as tv-series rather than a separate mini-series type.
-  // For MVP we treat a tv-series with exactly one regular season as a mini-series unless
-  // the provider explicitly says it is still in active production.
-  return type === 'tv-series'
-    && seasonNumbers.length === 1
-    && !ACTIVE_PRODUCTION_STATUSES.has(status);
-};
-
-const fetchProviderBatch = async (ids, token) => {
-  const url = new URL('https://api.poiskkino.dev/v1.4/movie');
-  url.searchParams.set('page', '1');
-  url.searchParams.set('limit', String(ids.length));
-  ids.forEach(id => url.searchParams.append('id', String(id)));
-  ['id', 'type', 'status', 'seasonsInfo'].forEach(field => url.searchParams.append('selectFields', field));
-
-  const response = await fetch(url.toString(), {
+const fetchJson = async (url, token) => {
+  const response = await fetch(url, {
     headers: {
       'X-API-KEY': token,
       accept: 'application/json'
@@ -63,8 +32,7 @@ const fetchProviderBatch = async (ids, token) => {
     throw new Error(message);
   }
 
-  const data = await response.json();
-  return Array.isArray(data?.docs) ? data.docs : [];
+  return response.json();
 };
 
 const readLibraryIds = async (db, userId, type) => {
@@ -80,6 +48,51 @@ const readLibraryIds = async (db, userId, type) => {
   return (result.results || []).map(row => String(row.kinopoisk_id));
 };
 
+const fetchStatuses = async (ids, token) => {
+  const url = new URL('https://api.poiskkino.dev/v1.4/movie');
+  url.searchParams.set('page', '1');
+  url.searchParams.set('limit', String(Math.min(PROVIDER_LIMIT, ids.length)));
+  ids.forEach(id => url.searchParams.append('id', String(id)));
+  url.searchParams.append('selectFields', 'id');
+  url.searchParams.append('selectFields', 'status');
+
+  const data = await fetchJson(url.toString(), token);
+  const map = new Map();
+  for (const item of Array.isArray(data?.docs) ? data.docs : []) {
+    if (item?.id != null) map.set(String(item.id), String(item.status || '').toLowerCase());
+  }
+  return map;
+};
+
+const fetchSeasonCounts = async (ids, token) => {
+  const counts = new Map(ids.map(id => [String(id), new Set()]));
+  let page = 1;
+  let totalPages = 1;
+
+  do {
+    const url = new URL('https://api.poiskkino.dev/v1.4/season');
+    url.searchParams.set('page', String(page));
+    url.searchParams.set('limit', String(PROVIDER_LIMIT));
+    ids.forEach(id => url.searchParams.append('movieId', String(id)));
+    url.searchParams.append('selectFields', 'movieId');
+    url.searchParams.append('selectFields', 'number');
+
+    const data = await fetchJson(url.toString(), token);
+    const docs = Array.isArray(data?.docs) ? data.docs : [];
+    for (const season of docs) {
+      const movieId = season?.movieId == null ? '' : String(season.movieId);
+      const number = Number(season?.number);
+      if (!counts.has(movieId) || !Number.isInteger(number) || number <= 0) continue;
+      counts.get(movieId).add(number);
+    }
+
+    totalPages = Math.max(1, Number(data?.pages) || 1);
+    page += 1;
+  } while (page <= totalPages && page <= 20);
+
+  return counts;
+};
+
 export async function onRequestPost(context) {
   try {
     const db = context.env.MOVIES_DB;
@@ -91,7 +104,7 @@ export async function onRequestPost(context) {
     const existingMiniIds = await readLibraryIds(db, session.userId, 'mini');
     const seriesIds = await readLibraryIds(db, session.userId, 'series');
     if (!seriesIds.length) {
-      return json({ ok: true, miniIds: existingMiniIds, checked: 0, classified: 0 });
+      return json({ ok: true, miniIds: existingMiniIds, checked: 0, classified: 0, seasonRecords: 0 });
     }
 
     const token = String(context.env.POISKKINO_API_TOKEN || '').trim();
@@ -99,26 +112,23 @@ export async function onRequestPost(context) {
 
     const miniIds = new Set(existingMiniIds);
     let checked = 0;
-    let returned = 0;
-    let singleSeasonCandidates = 0;
-    let activeExcluded = 0;
+    let seasonRecords = 0;
 
-    for (let offset = 0; offset < seriesIds.length; offset += 150) {
-      const batch = seriesIds.slice(offset, offset + 150);
-      const docs = await fetchProviderBatch(batch, token);
+    for (let offset = 0; offset < seriesIds.length; offset += PROVIDER_BATCH_SIZE) {
+      const batch = seriesIds.slice(offset, offset + PROVIDER_BATCH_SIZE);
+      const [statuses, seasonCounts] = await Promise.all([
+        fetchStatuses(batch, token),
+        fetchSeasonCounts(batch, token)
+      ]);
+
       checked += batch.length;
-      returned += docs.length;
-
-      for (const item of docs) {
-        const seasonNumbers = positiveSeasonNumbers(item?.seasonsInfo);
-        if (String(item?.type || '').toLowerCase() === 'tv-series' && seasonNumbers.length === 1) {
-          singleSeasonCandidates++;
-          if (ACTIVE_PRODUCTION_STATUSES.has(String(item?.status || '').toLowerCase())) {
-            activeExcluded++;
-            continue;
-          }
+      for (const id of batch) {
+        const seasons = seasonCounts.get(String(id)) || new Set();
+        seasonRecords += seasons.size;
+        const status = statuses.get(String(id)) || '';
+        if (seasons.size === 1 && !ACTIVE_STATUSES.has(status)) {
+          miniIds.add(String(id));
         }
-        if (isMiniSeries(item) && item?.id != null) miniIds.add(String(item.id));
       }
     }
 
@@ -137,11 +147,10 @@ export async function onRequestPost(context) {
       ok: true,
       miniIds: [...miniIds],
       checked,
-      returned,
       classified: newlyClassified.length,
-      singleSeasonCandidates,
-      activeExcluded,
-      rule: 'single-season-not-active-production'
+      seasonRecords,
+      rule: 'one-season-not-active-production',
+      source: 'poiskkino-season-endpoint'
     });
   } catch (error) {
     return json({ error: error?.message || 'Не удалось определить мини-сериалы.' }, 500);
