@@ -7,11 +7,10 @@ const JSON_HEADERS = {
 };
 
 const ACTIVE_STATUSES = new Set(['announced', 'filming', 'pre-production', 'post-production']);
-const PROVIDER_BATCH_SIZE = 40;
-const PROVIDER_CONCURRENCY = 3;
+const PROVIDER_BATCH_SIZE = 200;
 const PROVIDER_LIMIT = 250;
 const MAX_MINISERIES_EPISODES = 10;
-const PROVIDER_TIMEOUT_MS = 9000;
+const PROVIDER_TIMEOUT_MS = 8000;
 
 const json = (body, status = 200) => new Response(JSON.stringify(body), {
   status,
@@ -27,7 +26,11 @@ const fetchJson = async (url, token) => {
         'X-API-KEY': token,
         accept: 'application/json'
       },
-      signal: controller.signal
+      signal: controller.signal,
+      cf: {
+        cacheTtl: 86400,
+        cacheEverything: true
+      }
     });
 
     if (!response.ok) {
@@ -61,91 +64,66 @@ const readLibraryIdsByType = async (db, userId, type) => {
   return (result.results || []).map(row => String(row.kinopoisk_id));
 };
 
-const fetchStatuses = async (ids, token) => {
+const readEpisodeCount = season => {
+  for (const value of [season?.episodesCount, season?.episodeCount]) {
+    const number = Number(value);
+    if (Number.isInteger(number) && number > 0) return number;
+  }
+  return 0;
+};
+
+const fetchMovieSignals = async (ids, token) => {
   const url = new URL('https://api.poiskkino.dev/v1.4/movie');
   url.searchParams.set('page', '1');
   url.searchParams.set('limit', String(Math.min(PROVIDER_LIMIT, ids.length)));
   ids.forEach(id => url.searchParams.append('id', String(id)));
   url.searchParams.append('selectFields', 'id');
   url.searchParams.append('selectFields', 'status');
+  url.searchParams.append('selectFields', 'seasonsInfo');
 
   const data = await fetchJson(url.toString(), token);
-  const map = new Map();
+  const signals = new Map();
+
   for (const item of Array.isArray(data?.docs) ? data.docs : []) {
-    if (item?.id != null) map.set(String(item.id), String(item.status || '').toLowerCase());
-  }
-  return map;
-};
+    if (item?.id == null) continue;
 
-const episodeCount = season => {
-  if (Array.isArray(season?.episodes)) {
-    const numbered = new Set(
-      season.episodes
-        .map(episode => Number(episode?.number))
-        .filter(number => Number.isInteger(number) && number > 0)
-    );
-    return numbered.size || season.episodes.length;
-  }
-
-  for (const value of [season?.episodesCount, season?.episodeCount]) {
-    const number = Number(value);
-    if (Number.isInteger(number) && number > 0) return number;
-  }
-
-  return 0;
-};
-
-const fetchSeasonStats = async (ids, token) => {
-  const stats = new Map(ids.map(id => [String(id), new Map()]));
-  let page = 1;
-  let totalPages = 1;
-
-  do {
-    const url = new URL('https://api.poiskkino.dev/v1.4/season');
-    url.searchParams.set('page', String(page));
-    url.searchParams.set('limit', String(PROVIDER_LIMIT));
-    ids.forEach(id => url.searchParams.append('movieId', String(id)));
-    // Keep the response small: only fields needed for the MVP classification.
-    url.searchParams.append('selectFields', 'movieId');
-    url.searchParams.append('selectFields', 'number');
-    url.searchParams.append('selectFields', 'episodes');
-
-    const data = await fetchJson(url.toString(), token);
-    const docs = Array.isArray(data?.docs) ? data.docs : [];
-    for (const season of docs) {
-      const movieId = season?.movieId == null ? '' : String(season.movieId);
+    const seasonsByNumber = new Map();
+    for (const season of Array.isArray(item?.seasonsInfo) ? item.seasonsInfo : []) {
       const number = Number(season?.number);
-      if (!stats.has(movieId) || !Number.isInteger(number) || number <= 0) continue;
-      stats.get(movieId).set(number, episodeCount(season));
+      if (!Number.isInteger(number) || number <= 0) continue;
+      seasonsByNumber.set(number, Math.max(
+        seasonsByNumber.get(number) || 0,
+        readEpisodeCount(season)
+      ));
     }
 
-    totalPages = Math.max(1, Number(data?.pages) || 1);
-    page += 1;
-  } while (page <= totalPages && page <= 10);
+    signals.set(String(item.id), {
+      status: String(item.status || '').toLowerCase(),
+      seasons: seasonsByNumber
+    });
+  }
 
-  return stats;
+  return signals;
 };
 
 const classifyBatch = async (ids, token) => {
-  const [statuses, seasonStats] = await Promise.all([
-    fetchStatuses(ids, token),
-    fetchSeasonStats(ids, token)
-  ]);
-
+  const signals = await fetchMovieSignals(ids, token);
   const qualified = [];
   let seasonRecords = 0;
   let episodeRecords = 0;
 
   for (const id of ids) {
-    const seasons = seasonStats.get(String(id)) || new Map();
+    const signal = signals.get(String(id));
+    const seasons = signal?.seasons || new Map();
     seasonRecords += seasons.size;
+
     const episodeCounts = [...seasons.values()];
     episodeRecords += episodeCounts.reduce((sum, count) => sum + count, 0);
 
-    const status = statuses.get(String(id)) || '';
     const hasOneSeason = seasons.size === 1;
     const episodes = hasOneSeason ? episodeCounts[0] || 0 : 0;
     const shortEnough = episodes > 0 && episodes <= MAX_MINISERIES_EPISODES;
+    const status = signal?.status || '';
 
     if (hasOneSeason && shortEnough && !ACTIVE_STATUSES.has(status)) {
       qualified.push(String(id));
@@ -158,6 +136,7 @@ const classifyBatch = async (ids, token) => {
 const updateTypes = async (db, ids, type, currentType) => {
   for (let offset = 0; offset < ids.length; offset += 100) {
     const batch = ids.slice(offset, offset + 100);
+    if (!batch.length) continue;
     await db.batch(batch.map(id => db.prepare(`
       UPDATE movies
       SET type = ?, updated_at = CURRENT_TIMESTAMP
@@ -177,9 +156,8 @@ export async function onRequestPost(context) {
     const existingMiniIds = await readLibraryIdsByType(db, session.userId, 'mini');
     const seriesIds = await readLibraryIdsByType(db, session.userId, 'series');
 
-    // The previous broad rule already promoted one-season candidates to `mini`.
-    // Refine those first instead of re-scanning the whole library on a filter tap.
-    // If there are no cached candidates (new user/library), perform the initial discovery.
+    // После старого широкого правила сначала перепроверяем уже отмеченных кандидатов.
+    // Для нового пользователя без кандидатов можно проверить обычные сериалы тем же быстрым bulk-запросом.
     const candidateIds = existingMiniIds.length ? existingMiniIds : seriesIds;
     const phase = existingMiniIds.length ? 'refine-cached-candidates' : 'initial-discovery';
 
@@ -209,16 +187,13 @@ export async function onRequestPost(context) {
       batches.push(candidateIds.slice(offset, offset + PROVIDER_BATCH_SIZE));
     }
 
-    for (let offset = 0; offset < batches.length; offset += PROVIDER_CONCURRENCY) {
-      const group = batches.slice(offset, offset + PROVIDER_CONCURRENCY);
-      const results = await Promise.all(group.map(batch => classifyBatch(batch, token)));
-      results.forEach((result, index) => {
-        checked += group[index].length;
-        seasonRecords += result.seasonRecords;
-        episodeRecords += result.episodeRecords;
-        result.qualified.forEach(id => qualifiedMiniIds.add(id));
-      });
-    }
+    const results = await Promise.all(batches.map(batch => classifyBatch(batch, token)));
+    results.forEach((result, index) => {
+      checked += batches[index].length;
+      seasonRecords += result.seasonRecords;
+      episodeRecords += result.episodeRecords;
+      result.qualified.forEach(id => qualifiedMiniIds.add(id));
+    });
 
     const existingMiniSet = new Set(existingMiniIds);
     const newlyClassified = [...qualifiedMiniIds].filter(id => !existingMiniSet.has(id));
@@ -238,7 +213,7 @@ export async function onRequestPost(context) {
       maxEpisodes: MAX_MINISERIES_EPISODES,
       phase,
       rule: 'one-season-up-to-10-episodes-not-active-production',
-      source: 'poiskkino-season-endpoint'
+      source: 'poiskkino-movie-seasons-info'
     });
   } catch (error) {
     return json({ error: error?.message || 'Не удалось определить мини-сериалы.' }, 500);
