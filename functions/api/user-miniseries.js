@@ -8,8 +8,10 @@ const JSON_HEADERS = {
 
 const ACTIVE_STATUSES = new Set(['announced', 'filming', 'pre-production', 'post-production']);
 const PROVIDER_BATCH_SIZE = 40;
+const PROVIDER_CONCURRENCY = 3;
 const PROVIDER_LIMIT = 250;
 const MAX_MINISERIES_EPISODES = 10;
+const PROVIDER_TIMEOUT_MS = 9000;
 
 const json = (body, status = 200) => new Response(JSON.stringify(body), {
   status,
@@ -17,23 +19,33 @@ const json = (body, status = 200) => new Response(JSON.stringify(body), {
 });
 
 const fetchJson = async (url, token) => {
-  const response = await fetch(url, {
-    headers: {
-      'X-API-KEY': token,
-      accept: 'application/json'
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), PROVIDER_TIMEOUT_MS);
+  try {
+    const response = await fetch(url, {
+      headers: {
+        'X-API-KEY': token,
+        accept: 'application/json'
+      },
+      signal: controller.signal
+    });
+
+    if (!response.ok) {
+      let message = `ПоискКино вернул ошибку ${response.status}`;
+      try {
+        const body = await response.json();
+        message = body?.message || body?.error || message;
+      } catch {}
+      throw new Error(message);
     }
-  });
 
-  if (!response.ok) {
-    let message = `ПоискКино вернул ошибку ${response.status}`;
-    try {
-      const body = await response.json();
-      message = body?.message || body?.error || message;
-    } catch {}
-    throw new Error(message);
+    return response.json();
+  } catch (error) {
+    if (error?.name === 'AbortError') throw new Error('Источник данных отвечает слишком долго.');
+    throw error;
+  } finally {
+    clearTimeout(timer);
   }
-
-  return response.json();
 };
 
 const readLibraryIdsByType = async (db, userId, type) => {
@@ -93,6 +105,10 @@ const fetchSeasonStats = async (ids, token) => {
     url.searchParams.set('page', String(page));
     url.searchParams.set('limit', String(PROVIDER_LIMIT));
     ids.forEach(id => url.searchParams.append('movieId', String(id)));
+    // Keep the response small: only fields needed for the MVP classification.
+    url.searchParams.append('selectFields', 'movieId');
+    url.searchParams.append('selectFields', 'number');
+    url.searchParams.append('selectFields', 'episodes');
 
     const data = await fetchJson(url.toString(), token);
     const docs = Array.isArray(data?.docs) ? data.docs : [];
@@ -105,9 +121,38 @@ const fetchSeasonStats = async (ids, token) => {
 
     totalPages = Math.max(1, Number(data?.pages) || 1);
     page += 1;
-  } while (page <= totalPages && page <= 20);
+  } while (page <= totalPages && page <= 10);
 
   return stats;
+};
+
+const classifyBatch = async (ids, token) => {
+  const [statuses, seasonStats] = await Promise.all([
+    fetchStatuses(ids, token),
+    fetchSeasonStats(ids, token)
+  ]);
+
+  const qualified = [];
+  let seasonRecords = 0;
+  let episodeRecords = 0;
+
+  for (const id of ids) {
+    const seasons = seasonStats.get(String(id)) || new Map();
+    seasonRecords += seasons.size;
+    const episodeCounts = [...seasons.values()];
+    episodeRecords += episodeCounts.reduce((sum, count) => sum + count, 0);
+
+    const status = statuses.get(String(id)) || '';
+    const hasOneSeason = seasons.size === 1;
+    const episodes = hasOneSeason ? episodeCounts[0] || 0 : 0;
+    const shortEnough = episodes > 0 && episodes <= MAX_MINISERIES_EPISODES;
+
+    if (hasOneSeason && shortEnough && !ACTIVE_STATUSES.has(status)) {
+      qualified.push(String(id));
+    }
+  }
+
+  return { qualified, seasonRecords, episodeRecords };
 };
 
 const updateTypes = async (db, ids, type, currentType) => {
@@ -131,7 +176,12 @@ export async function onRequestPost(context) {
 
     const existingMiniIds = await readLibraryIdsByType(db, session.userId, 'mini');
     const seriesIds = await readLibraryIdsByType(db, session.userId, 'series');
-    const candidateIds = [...new Set([...seriesIds, ...existingMiniIds])];
+
+    // The previous broad rule already promoted one-season candidates to `mini`.
+    // Refine those first instead of re-scanning the whole library on a filter tap.
+    // If there are no cached candidates (new user/library), perform the initial discovery.
+    const candidateIds = existingMiniIds.length ? existingMiniIds : seriesIds;
+    const phase = existingMiniIds.length ? 'refine-cached-candidates' : 'initial-discovery';
 
     if (!candidateIds.length) {
       return json({
@@ -141,7 +191,8 @@ export async function onRequestPost(context) {
         classified: 0,
         reverted: 0,
         seasonRecords: 0,
-        episodeRecords: 0
+        episodeRecords: 0,
+        phase
       });
     }
 
@@ -153,30 +204,20 @@ export async function onRequestPost(context) {
     let seasonRecords = 0;
     let episodeRecords = 0;
 
+    const batches = [];
     for (let offset = 0; offset < candidateIds.length; offset += PROVIDER_BATCH_SIZE) {
-      const batch = candidateIds.slice(offset, offset + PROVIDER_BATCH_SIZE);
-      const [statuses, seasonStats] = await Promise.all([
-        fetchStatuses(batch, token),
-        fetchSeasonStats(batch, token)
-      ]);
+      batches.push(candidateIds.slice(offset, offset + PROVIDER_BATCH_SIZE));
+    }
 
-      checked += batch.length;
-
-      for (const id of batch) {
-        const seasons = seasonStats.get(String(id)) || new Map();
-        seasonRecords += seasons.size;
-        const episodeCounts = [...seasons.values()];
-        episodeRecords += episodeCounts.reduce((sum, count) => sum + count, 0);
-
-        const status = statuses.get(String(id)) || '';
-        const hasOneSeason = seasons.size === 1;
-        const episodes = hasOneSeason ? episodeCounts[0] || 0 : 0;
-        const shortEnough = episodes > 0 && episodes <= MAX_MINISERIES_EPISODES;
-
-        if (hasOneSeason && shortEnough && !ACTIVE_STATUSES.has(status)) {
-          qualifiedMiniIds.add(String(id));
-        }
-      }
+    for (let offset = 0; offset < batches.length; offset += PROVIDER_CONCURRENCY) {
+      const group = batches.slice(offset, offset + PROVIDER_CONCURRENCY);
+      const results = await Promise.all(group.map(batch => classifyBatch(batch, token)));
+      results.forEach((result, index) => {
+        checked += group[index].length;
+        seasonRecords += result.seasonRecords;
+        episodeRecords += result.episodeRecords;
+        result.qualified.forEach(id => qualifiedMiniIds.add(id));
+      });
     }
 
     const existingMiniSet = new Set(existingMiniIds);
@@ -195,6 +236,7 @@ export async function onRequestPost(context) {
       seasonRecords,
       episodeRecords,
       maxEpisodes: MAX_MINISERIES_EPISODES,
+      phase,
       rule: 'one-season-up-to-10-episodes-not-active-production',
       source: 'poiskkino-season-endpoint'
     });
