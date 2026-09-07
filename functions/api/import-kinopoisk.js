@@ -1,9 +1,12 @@
-// Importer version: 5.0 — sequential Cloudflare Browser Run /content
+// Importer version: 5.4 — profile URL + rate-safe Cloudflare Browser Run /content
 const JSON_HEADERS={
   'content-type':'application/json; charset=utf-8',
   'cache-control':'no-store',
   'x-content-type-options':'nosniff'
 };
+
+const WATCHLIST_TYPE='3575';
+const RETRY_DELAY_MS=11000;
 
 const decodeHtml=value=>String(value||'')
   .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,' ')
@@ -21,6 +24,8 @@ const decodeHtml=value=>String(value||'')
   .replace(/\s+/g,' ')
   .trim();
 
+const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+
 function jsonResponse(data,status=200,extraHeaders={}){
   return new Response(JSON.stringify(data),{status,headers:{...JSON_HEADERS,...extraHeaders}});
 }
@@ -28,13 +33,20 @@ function jsonResponse(data,status=200,extraHeaders={}){
 function normalizeListUrl(input){
   let url;
   try{url=new URL(input)}catch{throw new Error('Некорректная ссылка.')}
-  if(!/(^|\.)kinopoisk\.ru$/i.test(url.hostname))throw new Error('Нужна ссылка на kinopoisk.ru.');
-  const match=url.pathname.match(/^\/user\/(\d+)\/movies\/list\/type\/(\d+)/i);
-  if(!match)throw new Error('Нужна публичная ссылка на список фильмов пользователя Кинопоиска.');
+  if(!/(^|\.)kinopoisk\.ru$/i.test(url.hostname))throw new Error('Нужна ссылка на профиль Кинопоиска.');
+
+  const listMatch=url.pathname.match(/^\/user\/(\d+)\/movies\/list\/type\/(\d+)/i);
+  const profileMatch=url.pathname.match(/^\/user\/(\d+)\/?$/i);
+  const userId=listMatch?.[1]||profileMatch?.[1];
+  const listType=listMatch?.[2]||WATCHLIST_TYPE;
+
+  if(!userId)throw new Error('Нужна ссылка на ваш профиль Кинопоиска вида kinopoisk.ru/user/1234567/.');
+
   return {
-    userId:match[1],
-    listType:match[2],
-    base:`https://www.kinopoisk.ru/user/${match[1]}/movies/list/type/${match[2]}/sort/default/vector/desc/`
+    userId,
+    listType,
+    sourceType:listMatch?'list':'profile',
+    base:`https://www.kinopoisk.ru/user/${userId}/movies/list/type/${listType}/sort/default/vector/desc/`
   };
 }
 
@@ -85,17 +97,23 @@ function browserCredentials(env){
   return {accountId,token};
 }
 
-async function fetchBrowserHtml(url,env){
+function isDailyBrowserLimit(message){
+  return /browser\s*time\s*limit\s*exceeded|time\s*limit\s*exceeded\s*for\s*today|browser\s*hours?.*limit/i.test(String(message||''));
+}
+
+async function fetchBrowserHtml(url,env,{waitForTimeout=0,waitUntil='networkidle2'}={}){
   const {accountId,token}=browserCredentials(env);
   const endpoint=`https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/browser-rendering/content`;
+  const payload={
+    url,
+    gotoOptions:{waitUntil,timeout:45000},
+    rejectResourceTypes:['image','media','font']
+  };
+  if(waitForTimeout>0)payload.waitForTimeout=waitForTimeout;
   const response=await fetch(endpoint,{
     method:'POST',
     headers:{authorization:`Bearer ${token}`,'content-type':'application/json'},
-    body:JSON.stringify({
-      url,
-      gotoOptions:{waitUntil:'networkidle2',timeout:45000},
-      rejectResourceTypes:['image','media','font']
-    })
+    body:JSON.stringify(payload)
   });
   const raw=await response.text();
   if(!response.ok){
@@ -108,12 +126,24 @@ async function fetchBrowserHtml(url,env){
     const error=new Error(message);
     error.status=response.status;
     error.retryAfter=retryAfter;
+    error.dailyLimit=isDailyBrowserLimit(message);
     throw error;
   }
   try{
     const data=JSON.parse(raw);
     return String(data?.result?.content||data?.result||data?.content||raw);
   }catch{return raw;}
+}
+
+async function fetchParsedPage(pageUrl,env){
+  let html=await fetchBrowserHtml(pageUrl,env,{waitForTimeout:0,waitUntil:'networkidle2'});
+  let items=parseItems(html);
+  if(items.length)return {html,items,attempt:1};
+
+  await wait(RETRY_DELAY_MS);
+  html=await fetchBrowserHtml(pageUrl,env,{waitForTimeout:2000,waitUntil:'networkidle2'});
+  items=parseItems(html);
+  return {html,items,attempt:2};
 }
 
 export async function onRequestPost(context){
@@ -123,38 +153,49 @@ export async function onRequestPost(context){
     const page=Math.max(1,Math.floor(Number(body.page)||1));
     if(page>120)throw new Error('Номер страницы слишком большой.');
     const pageUrl=page===1?list.base:`${list.base}page/${page}/`;
-    const html=await fetchBrowserHtml(pageUrl,context.env);
-    const items=parseItems(html);
+    const rendered=await fetchParsedPage(pageUrl,context.env);
+    const html=rendered.html;
+    const items=rendered.items;
     const totalExpected=parseTotal(html);
     const totalPages=totalExpected?Math.max(1,Math.ceil(totalExpected/25)):null;
     if(!items.length){
       const text=decodeHtml(html);
       const sample=text.slice(0,260);
       throw new Error(page===1
-        ?`Страница открылась, но фильмы не распознаны.${sample?` Начало ответа: ${sample}`:''}`
-        :`На странице ${page} фильмы не распознаны. Импорт можно продолжить повторно.`);
+        ?`Страница открылась, но фильмы из «Буду смотреть» не распознаны.${sample?` Начало ответа: ${sample}`:''}`
+        :`Страница ${page} дважды загрузилась без фильмов. Прогресс сохранён — попробуйте продолжить позже.`);
     }
     return jsonResponse({
       source:'kinopoisk-browser-run-content',
-      importerVersion:'5.0',
+      importerVersion:'5.4',
       userId:list.userId,
       listType:list.listType,
+      sourceType:list.sourceType,
       page,
       pageUrl,
       totalExpected:totalExpected||null,
       totalPages,
       totalParsed:items.length,
+      renderAttempt:rendered.attempt,
       items
     });
   }catch(error){
+    if(error?.dailyLimit){
+      return jsonResponse({
+        error:'Лимит Browser Run на сегодня исчерпан. Прогресс импорта сохранён — продолжите позже, и приложение начнёт с той же страницы.',
+        retryable:false,
+        importerVersion:'5.4'
+      },503);
+    }
     if(error?.status===429){
       return jsonResponse({
         error:'Cloudflare временно ограничил частоту запросов.',
-        retryAfter:Math.max(10,error.retryAfter||10),
-        importerVersion:'5.0'
-      },429,{'retry-after':String(Math.max(10,error.retryAfter||10))});
+        retryAfter:Math.max(11,error.retryAfter||11),
+        retryable:true,
+        importerVersion:'5.4'
+      },429,{'retry-after':String(Math.max(11,error.retryAfter||11))});
     }
-    return jsonResponse({error:error.message||'Ошибка импорта.',importerVersion:'5.0'},400);
+    return jsonResponse({error:error.message||'Ошибка импорта.',importerVersion:'5.4'},400);
   }
 }
 

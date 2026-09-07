@@ -7,6 +7,12 @@
     'Интересное и необычное':['фантастика','детектив','триллер','биография','фэнтези']
   };
 
+  function displayGenre(label){
+    if(typeof window.movieAppGenreLabel==='function')return window.movieAppGenreLabel(label);
+    const value=String(label||'').trim().toLocaleLowerCase('ru-RU');
+    return value?value.charAt(0).toLocaleUpperCase('ru-RU')+value.slice(1):'';
+  }
+
   function currentMoodCore(){
     const labels=[...document.querySelectorAll('#quickChoice .choice-summary .badge')].map(el=>el.textContent.trim());
     const mood=labels.find(label=>moodCores[label]);
@@ -27,7 +33,7 @@
       if(matched.length===2)break;
       if(!matched.includes(item))matched.push(item);
     }
-    return matched.slice(0,2).map(item=>item.label);
+    return matched.slice(0,2).map(item=>displayGenre(item.label));
   }
 
   function refreshAlternativeGenres(){
