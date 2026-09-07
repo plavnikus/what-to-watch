@@ -17,7 +17,8 @@
       await load('/genre-presentation-v1.js?v=pr16-7');
       await load('/scroll-top-v1.js?v=pr16-7');
       await load('/catalog-navigation-v1.js?v=pr16-9');
-      await load('/mini-series-filter-v1.js?v=pr16-12');
+      await load('/short-series-filter-v1.js?v=pr16-13');
+      await load('/short-series-catalog-v1.js?v=pr16-13');
 
       const originalSetImportLoading = window.setImportLoading;
       if (typeof originalSetImportLoading === 'function') {
