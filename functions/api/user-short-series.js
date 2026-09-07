@@ -12,6 +12,7 @@ const PROVIDER_BATCH_SIZE = 150;
 const PROVIDER_LIMIT = 250;
 const MAX_SHORT_SERIES_EPISODES = 10;
 const PROVIDER_TIMEOUT_MS = 7000;
+const D1_IN_CHUNK_SIZE = 80;
 
 const json = (body, status = 200) => new Response(JSON.stringify(body), {
   status,
@@ -89,8 +90,10 @@ const readLibrarySeriesIds = async (db, userId) => {
 
 const readCachedTraits = async (db, ids) => {
   const map = new Map();
-  for (let offset = 0; offset < ids.length; offset += 400) {
-    const batch = ids.slice(offset, offset + 400);
+  // D1 ограничивает число bound-параметров одного SQL-запроса.
+  // Размер библиотеки не должен влиять на размер отдельного statement.
+  for (let offset = 0; offset < ids.length; offset += D1_IN_CHUNK_SIZE) {
+    const batch = ids.slice(offset, offset + D1_IN_CHUNK_SIZE);
     if (!batch.length) continue;
     const placeholders = batch.map(() => '?').join(',');
     const result = await db.prepare(`
