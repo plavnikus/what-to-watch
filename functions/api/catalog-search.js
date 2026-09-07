@@ -4,6 +4,8 @@ const JSON_HEADERS = {
   'x-content-type-options': 'nosniff'
 };
 
+const SHORT_RULE_VERSION = 'short-v1-one-season-up-to-10';
+
 const asNumber = value => Number.isFinite(Number(value)) ? Number(value) : null;
 const parseJsonArray = value => {
   if (!value) return [];
@@ -35,12 +37,13 @@ const formatDuration = minutes => {
 const normalize = row => {
   const imdbId = String(row.imdb_id || '');
   const durationMinutes = asNumber(row.duration_minutes);
+  const rawType = String(row.type || 'film');
   return {
     kinopoiskId: String(row.kinopoisk_id),
     title: String(row.title || ''),
     originalTitle: String(row.original_title || ''),
     year: asNumber(row.year),
-    type: String(row.type || 'film'),
+    type: rawType === 'mini' ? 'series' : rawType,
     genres: normalizeGenres(parseJsonArray(row.genres_json)),
     countries: parseJsonArray(row.countries_json),
     desc: String(row.description || row.short_description || ''),
@@ -64,13 +67,38 @@ const json = (body, status = 200) => new Response(JSON.stringify(body), {
   headers: JSON_HEADERS
 });
 
+const ensureTraitsTable = async db => {
+  await db.prepare(`
+    CREATE TABLE IF NOT EXISTS movie_series_traits (
+      kinopoisk_id INTEGER PRIMARY KEY,
+      is_short_series INTEGER NOT NULL DEFAULT 0,
+      is_limited_series INTEGER,
+      season_count INTEGER,
+      episode_count INTEGER,
+      short_rule_version TEXT,
+      short_source TEXT,
+      limited_source TEXT,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `).run();
+};
+
 const presetSql = (preset, currentYear) => {
   const base = `poster_url IS NOT NULL AND poster_url <> ''`;
   switch (preset) {
     case 'comedy': return { where: `${base} AND genres_json LIKE ?`, binds: ['%"комедия"%'], order: 'rating_kp DESC, year DESC' };
     case 'thriller': return { where: `${base} AND genres_json LIKE ?`, binds: ['%"триллер"%'], order: 'rating_kp DESC, year DESC' };
     case 'horror': return { where: `${base} AND genres_json LIKE ?`, binds: ['%"ужасы"%'], order: 'rating_kp DESC, year DESC' };
-    case 'mini': return { where: `${base} AND type = ?`, binds: ['mini'], order: 'rating_kp DESC, year DESC' };
+    case 'short-series': return {
+      where: `${base} AND EXISTS (
+        SELECT 1 FROM movie_series_traits mst
+        WHERE mst.kinopoisk_id = movies.kinopoisk_id
+          AND mst.is_short_series = 1
+          AND mst.short_rule_version = ?
+      )`,
+      binds: [SHORT_RULE_VERSION],
+      order: 'rating_kp DESC, year DESC'
+    };
     case 'rating7': return { where: `${base} AND rating_kp >= 7`, binds: [], order: 'rating_kp DESC, year DESC' };
     case 'short': return { where: `${base} AND duration_minutes > 0 AND duration_minutes <= 120`, binds: [], order: 'rating_kp DESC, year DESC' };
     case 'new': return { where: `${base} AND year >= ?`, binds: [currentYear - 1], order: 'year DESC, rating_kp DESC' };
@@ -92,7 +120,6 @@ const selectStarterItems = (items, limit) => {
   const selected = [];
   const usedPrimary = new Set();
 
-  // First pass: one strong title per primary genre, so the strip feels varied.
   for (const item of eligible) {
     const primary = starterPrimaryGenre(item);
     if (primary && usedPrimary.has(primary)) continue;
@@ -101,7 +128,6 @@ const selectStarterItems = (items, limit) => {
     if (selected.length >= limit) return selected;
   }
 
-  // Second pass: fill remaining slots with the next best eligible titles.
   for (const item of eligible) {
     if (selected.some(x => x.kinopoiskId === item.kinopoiskId)) continue;
     selected.push(item);
@@ -121,6 +147,7 @@ export async function onRequestGet(context) {
 
   try {
     if (preset) {
+      if (preset === 'short-series') await ensureTraitsTable(db);
       const cfg = presetSql(preset, new Date().getFullYear());
       if (!cfg) return json({ error: 'Неизвестный быстрый фильтр.' }, 400);
       const queryLimit = preset === 'starter' ? Math.min(Math.max(limit * 6, 30), 50) : limit;
